@@ -38,11 +38,16 @@ endif
 EXTRA_CFLAGS += -DHAVE_LIBXML2 $(shell $(PKG_CONFIG) --cflags libxml-2.0)
 EXTRA_LDFLAGS += $(shell $(PKG_CONFIG) --libs libxml-2.0)
 
-all: libapteryx-xml.so
+all: libapteryx-xml.so libapteryx-schema.so
 
-libapteryx-xml.so: schema.o lua.o
+libapteryx-schema.so: schema.o
 	@echo "Creating library "$@""
 	$(Q)$(CC) -shared $(LDFLAGS) -o $@ $^ $(EXTRA_LDFLAGS)
+
+libapteryx-xml.so: libapteryx-schema.so
+libapteryx-xml.so: lua.o
+	@echo "Creating library "$@""
+	$(Q)$(CC) -shared $(LDFLAGS) -o $@ $^ $(EXTRA_LDFLAGS) -L. -lapteryx-schema
 	@ln -s -f $@ apteryx-xml.so
 
 %.o: %.c
@@ -78,6 +83,9 @@ install: all
 	@install -D -m 0644 apteryx.xsd $(DESTDIR)/etc/apteryx/schema/
 	@install -d $(DESTDIR)/$(PREFIX)/lib
 	@install -D libapteryx-xml.so $(DESTDIR)/$(PREFIX)/lib/
+	@install -D libapteryx-schema.so $(DESTDIR)/$(PREFIX)/lib/
+	install -d $(DESTDIR)/$(PREFIX)/include
+	install -D apteryx-xml.h $(DESTDIR)/$(PREFIX)/include/
 
 clean:
 	@echo "Cleaning..."
