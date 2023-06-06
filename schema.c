@@ -2274,7 +2274,7 @@ _sch_xml_to_gnode (_sch_xml_to_gnode_parms *_parms, sch_node * schema, xmlNs *ns
                 APTERYX_NODE (node, g_strdup (key));
                 DEBUG (_parms->in_flags, "%*s%s\n", (depth + 1) * 2, " ", key);
             }
-            key_value = attr;
+            key_value = g_strdup (attr);
         }
         else if (xmlFirstElementChild (xml) &&
                  g_strcmp0 ((const char *) xmlFirstElementChild (xml)->name, key) == 0 &&
