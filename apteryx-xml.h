@@ -109,6 +109,7 @@ GNode *sch_path_to_gnode (sch_instance * instance, sch_node * schema, const char
 bool sch_query_to_gnode (sch_instance * instance, sch_node * schema, GNode *parent, const char * query, int flags, int *rflags);
 bool sch_traverse_tree (sch_instance * instance, sch_node * schema, GNode * node, int flags);
 GNode *sch_path_to_query (sch_instance * instance, sch_node * schema, const char * path, int flags); //DEPRECATED
+GNode *sch_gnode_remove_empty_nodes (GNode *node);
 
 /*
  * Netconf error handling

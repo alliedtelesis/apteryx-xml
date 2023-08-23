@@ -3806,3 +3806,28 @@ sch_json_to_gnode (sch_instance * instance, sch_node * schema, json_t * json, in
     }
     return root;
 }
+
+GNode *
+_sch_gnode_remove_empty_nodes (GNode *node)
+{
+    if (node)
+    {
+        if (!node->data)
+        {
+            g_node_destroy (node);
+            return NULL;
+        }
+
+        for (GNode *child = node->children; child; child = child->next)
+        {
+            _sch_gnode_remove_empty_nodes (child);
+        }
+    }
+    return node;
+}
+
+GNode *
+sch_gnode_remove_empty_nodes (GNode *node)
+{
+    return _sch_gnode_remove_empty_nodes (node);
+}
