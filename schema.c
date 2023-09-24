@@ -2615,8 +2615,8 @@ _sch_gnode_to_xml (sch_instance * instance, sch_node * schema, xmlNs *ns, xmlNod
             gnode_sort_children (sch_node_child_first (schema), child);
             for (GNode * field = child->children; field; field = field->next)
             {
-                if (_sch_gnode_to_xml (instance, sch_node_child_first (schema), ns,
-                                       list_data, field, flags, depth + 1))
+                if (field->data && _sch_gnode_to_xml (instance, sch_node_child_first (schema),
+                                                      ns, list_data, field, flags, depth + 1))
                 {
                     has_child = true;
                 }
