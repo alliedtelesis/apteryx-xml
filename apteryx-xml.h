@@ -108,6 +108,7 @@ typedef enum
 GNode *sch_path_to_gnode (sch_instance * instance, sch_node * schema, const char * path, int flags, sch_node ** rschema);
 bool sch_query_to_gnode (sch_instance * instance, sch_node * schema, GNode *parent, const char * query, int flags, int *rflags);
 bool sch_traverse_tree (sch_instance * instance, sch_node * schema, GNode * node, int flags);
+bool sch_traverse_tree_netconf (sch_instance * instance, GNode * node, int flags, int rdepth);
 GNode *sch_path_to_query (sch_instance * instance, sch_node * schema, const char * path, int flags); //DEPRECATED
 
 /*
