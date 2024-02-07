@@ -928,7 +928,7 @@ sch_load_model_translation_files (sch_instance *instance, const char *path)
             lua_pushnil (instance->ls);
             while (lua_next (instance->ls, -2) != 0)
             {
-                int index;
+                int index = 0;
                 const char *index_str = NULL;
                 const char *external = NULL;
                 const char *internal = NULL;

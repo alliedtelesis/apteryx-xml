@@ -342,6 +342,18 @@ __call (lua_State * L)
 }
 
 static int
+close_gc_callback (lua_State *L)
+{
+    sch_instance *api = _get_api (L);
+    if (api)
+    {
+        sch_free (api);
+        _set_api (L, NULL);
+    }
+    return 0;
+}
+
+static int
 lua_apteryx_api (lua_State * L)
 {
     /* Metatable functions */
@@ -378,6 +390,8 @@ lua_apteryx_api (lua_State * L)
     /* Create the API object */
     luaL_newmetatable (L, "apteryx_mt");
     luaL_setfuncs (L, _apteryx_mt, 0);
+    lua_pushcfunction (L, close_gc_callback);
+    lua_setfield (L, -2, "__gc");
     luaL_newmetatable (L, "apteryx_api");
     luaL_setmetatable (L, "apteryx_mt");
     lua_pushstring (L, "__path");
