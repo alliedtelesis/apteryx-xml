@@ -2625,8 +2625,6 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, sch_node ** vs
     char *name = NULL;
     char *last_good_schema_name = NULL;
     sch_node *last_good_schema = NULL;
-    _Atomic static sch_node *last_valid_schema = NULL;
-
 
     if (path && path[0] == '/')
     {
