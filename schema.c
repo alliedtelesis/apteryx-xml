@@ -58,8 +58,6 @@ static __thread char tl_errmsg[BUFSIZ] = {0};
 
 #define READ_BUF_SIZE 512
 
-static sch_node *last_valid_schema = NULL;
-
 typedef struct _sch_instance
 {
     xmlDoc *doc;
@@ -2693,8 +2691,9 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, sch_node ** vs
         last_good_schema = schema;
 
         last_good_schema_name = sch_name (last_good_schema);
-        if (last_good_schema && g_strcmp0 (last_good_schema_name, "*") != 0)
-            last_valid_schema = last_good_schema;
+        if (vschema && last_good_schema && g_strcmp0 (last_good_schema_name, "*") != 0)
+            *vschema = last_good_schema;
+
         free (last_good_schema_name);
 
         schema = _sch_node_child (ns, schema, name);
@@ -2819,8 +2818,6 @@ exit:
         *rschema = schema;
     free (name);
     g_free (new_path);
-    if (last_valid_schema && vschema)
-        *vschema = last_valid_schema;
     return rnode;
 }
 
