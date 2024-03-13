@@ -3890,6 +3890,17 @@ _sch_traverse_nodes (sch_node * schema, GNode * parent, int flags, int depth, in
                 name = NULL;
             }
         }
+        else if (!child && (flags & SCH_F_SET_NULL) && g_strcmp0 (name, "*") == 0)
+        {
+            if (sch_is_leaf_list (sch_node_parent (schema)))
+            {
+                for (GNode *child = parent->children; child; child = child->next)
+                {
+                    free (child->children->data);
+                    child->children->data = g_strdup ("");
+                }
+            }
+        }
         else if (child && flags & SCH_F_SET_NULL)
         {
             if (!(flags & SCH_F_FILTER_RDEPTH) || (depth >= rdepth))
