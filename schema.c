@@ -21,6 +21,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 #include <inttypes.h>
 #include <string.h>
 #include <glib.h>
@@ -2609,7 +2610,7 @@ bool sch_query_to_gnode (sch_instance * instance, sch_node * schema, GNode *pare
 }
 
 static GNode *
-_sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, const char *path, int flags, int depth)
+_sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, sch_node ** vschema, xmlNs *ns, const char *path, int flags, int depth)
 {
     sch_node *schema = rschema && *rschema ? *rschema : xmlDocGetRootElement (instance->doc);
     const char *next = NULL;
@@ -2622,6 +2623,7 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
     char *new_path = NULL;
     char *colon;
     char *name = NULL;
+    char *last_good_schema_name = NULL;
     sch_node *last_good_schema = NULL;
 
     if (path && path[0] == '/')
@@ -2685,6 +2687,13 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
         if (!schema || sch_is_proxy (schema))
             schema = xmlDocGetRootElement (instance->doc);
         last_good_schema = schema;
+
+        last_good_schema_name = sch_name (last_good_schema);
+        if (vschema && last_good_schema && g_strcmp0 (last_good_schema_name, "*") != 0)
+            *vschema = last_good_schema;
+
+        free (last_good_schema_name);
+
         schema = _sch_node_child (ns, schema, name);
         if ((flags & SCH_F_XPATH) && schema == NULL && g_strcmp0 (name, "*") == 0)
         {
@@ -2790,7 +2799,7 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
 
         if (next)
         {
-            node = _sch_path_to_gnode (instance, &schema, ns, next, flags, depth + 1);
+            node = _sch_path_to_gnode (instance, &schema, vschema, ns, next, flags, depth + 1);
             if (!node)
             {
                 free ((void *)rnode->data);
@@ -2811,7 +2820,7 @@ exit:
 }
 
 GNode *
-sch_path_to_gnode (sch_instance * instance, sch_node * schema, const char *path, int flags, sch_node ** rschema)
+sch_path_to_gnode (sch_instance * instance, sch_node * schema, const char *path, int flags, sch_node ** rschema, sch_node ** vschema)
 {
     GNode *node;
     char *_path = NULL;
@@ -2826,7 +2835,7 @@ sch_path_to_gnode (sch_instance * instance, sch_node * schema, const char *path,
             path = _path;
         }
     }
-    node = _sch_path_to_gnode (instance, rschema, NULL, path, flags, 0);
+    node = _sch_path_to_gnode (instance, rschema, vschema, NULL, path, flags, 0);
     g_free (_path);
 
     return node;
@@ -2850,7 +2859,7 @@ sch_path_to_query (sch_instance * instance, sch_node * schema, const char *path,
 
     /* Parse the path first */
     tl_error = SCH_E_SUCCESS;
-    root = _sch_path_to_gnode (instance, &schema, NULL, path, flags, 0);
+    root = _sch_path_to_gnode (instance, &schema, NULL, NULL, path, flags, 0);
     if (!root || !schema)
     {
         free (_path);
