@@ -3014,7 +3014,7 @@ _sch_gnode_to_xml (sch_instance * instance, sch_node * schema, xmlNs *ns, xmlNod
     }
 
     /* Find schema node */
-    if (!schema)
+    if (!schema || sch_is_proxy (schema))
         schema = xmlDocGetRootElement (instance->doc);
     schema = _sch_node_child (ns, schema, name);
     if (schema == NULL)
@@ -3371,7 +3371,7 @@ _sch_xml_to_gnode (_sch_xml_to_gnode_parms *_parms, sch_node * schema, xmlNs *ns
     }
 
     /* Find schema node */
-    if (!schema)
+    if (!schema || sch_is_proxy (schema))
         schema = xmlDocGetRootElement (instance->doc);
     schema = _sch_node_child (ns, schema, name);
     if (schema == NULL)
@@ -3611,7 +3611,7 @@ _sch_xml_to_gnode (_sch_xml_to_gnode_parms *_parms, sch_node * schema, xmlNs *ns
                 break;
             }
             /* Multiple children - make sure key appears */
-            else if (xmlChildElementCount (xml) > 1)
+            else if (xmlChildElementCount (xml) > 1 && !sch_is_proxy (schema))
             {
                 GNode *_node = APTERYX_NODE (node, g_strdup ((const char *) child->name));
                 DEBUG (_parms->in_flags, "%*s%s\n", depth * 2, " ", APTERYX_NAME (node));
