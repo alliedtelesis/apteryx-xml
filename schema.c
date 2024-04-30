@@ -2609,7 +2609,7 @@ bool sch_query_to_gnode (sch_instance * instance, sch_node * schema, GNode *pare
 }
 
 static GNode *
-_sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, const char *path, int flags, int depth)
+_sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, sch_node ** vschema, xmlNs *ns, const char *path, int flags, int depth)
 {
     sch_node *schema = rschema && *rschema ? *rschema : xmlDocGetRootElement (instance->doc);
     const char *next = NULL;
@@ -2678,6 +2678,27 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
                 equals = g_strdup (equals + 1);
                 free (name);
                 name = temp;
+            }
+        }
+
+        if ((flags & SCH_F_XPATH) && schema && vschema && *vschema == NULL && sch_is_list (schema))
+        {
+            /* Check for a schema list that has a parent that has skipped down
+             * to the next schema level down without a list item selector */
+            sch_node *parent = sch_node_parent (schema);
+            if (parent)
+            {
+                GList *path_list = NULL;
+                char *__next = g_strdup_printf ("/%s", name);
+                bool found = sch_node_find_name (instance, ns, parent, __next, flags, &path_list);
+                g_list_free_full (path_list, g_free);
+                g_free (__next);
+
+                if (found)
+                {
+                    *vschema = parent;
+                    goto exit;
+                }
             }
         }
 
@@ -2790,12 +2811,15 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
 
         if (next)
         {
-            node = _sch_path_to_gnode (instance, &schema, ns, next, flags, depth + 1);
+            node = _sch_path_to_gnode (instance, &schema, vschema, ns, next, flags, depth + 1);
             if (!node)
             {
-                free ((void *)rnode->data);
-                g_node_destroy (rnode);
-                rnode = NULL;
+                if (!vschema || !*vschema)
+                {
+                    free ((void *)rnode->data);
+                    g_node_destroy (rnode);
+                    rnode = NULL;
+                }
                 goto exit;
             }
             g_node_prepend (child ? : rnode, node);
@@ -2810,23 +2834,49 @@ exit:
     return rnode;
 }
 
+static void
+_modify_path (const char* xpath, char ** path)
+{
+    if (path)
+    {
+        char **split = g_strsplit (xpath, "//", -1);
+        *path = g_strjoinv ("/*/", split);
+        g_strfreev (split);
+    }
+}
+
 GNode *
 sch_path_to_gnode (sch_instance * instance, sch_node * schema, const char *path, int flags, sch_node ** rschema)
 {
     GNode *node;
     char *_path = NULL;
 
-    if ((flags & SCH_F_XPATH))
+    if ((flags & SCH_F_XPATH) && (strstr (path, "//")))
     {
-        if (strstr (path, "//"))
-        {
-            char **split = g_strsplit (path, "//", -1);
-            _path = g_strjoinv ("/*/", split);
-            g_strfreev (split);
+        _modify_path (path, &_path);
+        if (_path)
             path = _path;
-        }
     }
-    node = _sch_path_to_gnode (instance, rschema, NULL, path, flags, 0);
+    node = _sch_path_to_gnode (instance, rschema, NULL, NULL, path, flags, 0);
+    g_free (_path);
+
+    return node;
+}
+
+GNode *
+sch_path_to_gnode_netconf (sch_instance * instance, sch_node * schema, const char *path, int flags, sch_node ** rschema, sch_node ** vschema)
+{
+    GNode *node;
+    char *_path = NULL;
+
+    if ((flags & SCH_F_XPATH) && (strstr (path, "//")))
+    {
+        _modify_path (path, &_path);
+        if (_path)
+            path = _path;
+    }
+
+    node = _sch_path_to_gnode (instance, rschema, vschema, NULL, path, flags, 0);
     g_free (_path);
 
     return node;
@@ -2850,7 +2900,7 @@ sch_path_to_query (sch_instance * instance, sch_node * schema, const char *path,
 
     /* Parse the path first */
     tl_error = SCH_E_SUCCESS;
-    root = _sch_path_to_gnode (instance, &schema, NULL, path, flags, 0);
+    root = _sch_path_to_gnode (instance, &schema, NULL, NULL, path, flags, 0);
     if (!root || !schema)
     {
         free (_path);

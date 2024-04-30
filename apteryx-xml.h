@@ -114,6 +114,7 @@ typedef enum
     SCH_F_FILTER_RDEPTH         = (1 << 14), /* Set filter based on depth value */
 } sch_flags;
 GNode *sch_path_to_gnode (sch_instance * instance, sch_node * schema, const char * path, int flags, sch_node ** rschema);
+GNode *sch_path_to_gnode_netconf (sch_instance * instance, sch_node * schema, const char * path, int flags, sch_node ** rschema, sch_node ** vschema);
 bool sch_query_to_gnode (sch_instance * instance, sch_node * schema, GNode *parent, const char * query, int flags, int *rflags);
 bool sch_traverse_tree (sch_instance * instance, sch_node * schema, GNode * node, int flags, int rdepth);
 GNode *sch_path_to_query (sch_instance * instance, sch_node * schema, const char * path, int flags); //DEPRECATED
