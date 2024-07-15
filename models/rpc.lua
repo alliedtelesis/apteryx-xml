@@ -48,8 +48,8 @@ local function set_age(path, input)
 end
 
 return {
-    ["/operations/t4:reboot"] = reboot,
-    ["/operations/t4:get-reboot-info"] = get_reboot_info,
+    ["/operations/reboot"] = reboot,
+    ["/operations/get-reboot-info"] = get_reboot_info,
     ["/t4:test/state/reset"] = reset_state,
     ["/t4:test/state/get-last-reset-time"] = get_reset_time,
     ["/t4:test/state/users/*/set-age"] = set_age,
