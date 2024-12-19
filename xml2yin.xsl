@@ -8,32 +8,6 @@
 	<xsl:strip-space elements="*"/>
 	<xsl:param name="prefix" select="'apteryx'"/>
 
-	<xsl:template name="description">
-		<xsl:if test="@help">
-			<description>
-				<text><xsl:value-of select="@help"/></text>
-			</description>
-		</xsl:if>
-	</xsl:template>
-
-	<xsl:template name="config">
-		<xsl:if test="@mode='r' or @mode='h'">
-			<config value="false"/>
-		</xsl:if>
-	</xsl:template>
-
-	<xsl:template name="pattern">
-		<xsl:if test="@pattern">
-			<pattern value="{@pattern}"/>
-		</xsl:if>
-	</xsl:template>
-
-	<xsl:template name="default">
-		<xsl:if test="@default">
-			<default value="{@default}"/>
-		</xsl:if>
-	</xsl:template>
-
 	<xsl:template match="apteryx:VALUE">
 		<enum name="{@name}">
 			<xsl:if test="number(@value)=@value">
@@ -44,33 +18,31 @@
 	</xsl:template>
 
 	<xsl:template name="enumeration">
+		<type name="enumeration">
+			<xsl:apply-templates select="./*" />
+		</type>
 		<xsl:if test="@default">
 			<xsl:variable name="default" select="@default" />
 			<default value="{./*[@value=$default]/@name}"/>
 		</xsl:if>
-		<type name="enumeration">
-			<xsl:apply-templates select="./*" />
-		</type>
 	</xsl:template>
 
 	<xsl:template name="int32">
-		<xsl:call-template name="default" />
 		<type name="int32">
 			<xsl:call-template name="pattern" />
 		</type>
+		<xsl:call-template name="default" />
 	</xsl:template>
 
 	<xsl:template name="string">
-		<xsl:call-template name="default" />
 		<type name="string">
 			<xsl:call-template name="pattern" />
 		</type>
+		<xsl:call-template name="default" />
 	</xsl:template>
 
 	<xsl:template name="leaf">
 		<leaf name="{@name}">
-			<xsl:call-template name="description" />
-			<xsl:call-template name="config" />
 			<xsl:choose>
 				<xsl:when test="./*[local-name()='VALUE']">
 					<xsl:call-template name="enumeration" />
@@ -82,31 +54,33 @@
 					<xsl:call-template name="string" />
 				</xsl:otherwise>
 			</xsl:choose>
+			<xsl:call-template name="config" />
+			<xsl:call-template name="description" />
 		</leaf>
 	</xsl:template>
 
 	<xsl:template name="leaf-list">
 		<leaf-list name="{@name}">
 			<type name="string" />
-			<xsl:call-template name="description" />
 			<xsl:if test="./*/@mode='r' or ./*/@mode='h'">
 				<config value="false"/>
 			</xsl:if>
+			<xsl:call-template name="description" />
 		</leaf-list>
 	</xsl:template>
 
 	<xsl:template name="list">
 		<list name="{@name}">
 			<key value="{./*[1]/*[1]/@name}"/>
-			<xsl:call-template name="description" />
 			<xsl:apply-templates select="./*[1]/*" />
+			<xsl:call-template name="description" />
 		</list>
 	</xsl:template>
 
 	<xsl:template name="container">
 		<container name="{@name}">
-			<xsl:call-template name="description" />
 			<xsl:apply-templates select="./*" />
+			<xsl:call-template name="description" />
 		</container>
 	</xsl:template>
 	
@@ -137,6 +111,32 @@
 			<prefix value="{$prefix}"/>
 			<xsl:apply-templates />
 		</module>
+	</xsl:template>
+
+	<xsl:template name="default">
+		<xsl:if test="@default">
+			<default value="{@default}"/>
+		</xsl:if>
+	</xsl:template>
+
+	<xsl:template name="config">
+		<xsl:if test="@mode='r' or @mode='h'">
+			<config value="false"/>
+		</xsl:if>
+	</xsl:template>
+
+	<xsl:template name="description">
+		<xsl:if test="@help">
+			<description>
+				<text><xsl:value-of select="@help"/></text>
+			</description>
+		</xsl:if>
+	</xsl:template>
+
+	<xsl:template name="pattern">
+		<xsl:if test="@pattern">
+			<pattern value="{@pattern}"/>
+		</xsl:if>
 	</xsl:template>
 
 	<xsl:template match="text()|@*">
