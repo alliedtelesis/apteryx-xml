@@ -898,8 +898,10 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
                 uniontypes = ntype.search('type')
                 upatt = []
                 for uniontype in uniontypes:
+                    ut = uniontype
                     if uniontype.i_typedef:
                         ut = uniontype.i_typedef.search_one("type")
+                    if ut is not None:
                         npatt = ut.search_one("pattern")
                         if npatt is not None:
                             upatt.append(f"(^{npatt.arg}$)")
