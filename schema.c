@@ -4192,9 +4192,14 @@ _sch_json_to_gnode (sch_instance * instance, sch_node * schema, xmlNs *ns,
     /* LEAF-LIST */
     if (sch_is_leaf_list (schema) && json_is_array (json))
     {
-        depth++;
         tree = node = APTERYX_NODE (NULL, g_strdup (name));
         schema = sch_node_child_first (schema);
+        if (json_array_size(json) == 0 )
+        {
+            DEBUG (flags, "%*s%s%s = (null)\n", depth * 2, " ", depth ? "" : "/", name);
+            node = APTERYX_NODE (tree, NULL);
+        }
+        depth++;
         json_array_foreach (json, index, child)
         {
             value = decode_json_type (child);
@@ -4224,6 +4229,11 @@ _sch_json_to_gnode (sch_instance * instance, sch_node * schema, xmlNs *ns,
         depth++;
         tree = node = APTERYX_NODE (NULL, g_strdup (name));
         schema = sch_node_child_first (schema);
+        if (json_array_size(json) == 0 )
+        {
+            node = APTERYX_NODE (tree, NULL);
+            DEBUG (flags, "%*s%s\n", depth * 2, " ", "(null)");
+        }
         json_array_foreach (json, index, child)
         {
             json_t *subchild;
