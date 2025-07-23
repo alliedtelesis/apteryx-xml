@@ -248,7 +248,11 @@ load_schema_files (GList ** files, const char *path)
                 new_item->d_name = g_strdup (ep->d_name);
                 if (fnmatch ("*.map", ep->d_name, FNM_PATHNAME) != 0)
                 {
+#if LIBXML_VERSION >= 21400
+                    new_item->doc_new = xmlReadFile (new_item->filename, NULL, XML_PARSE_UNZIP);
+#else   /* LibXML < 2.14.0 */
                     new_item->doc_new = xmlParseFile (new_item->filename);
+#endif  /* LIBXML_VERSION */
                     if (new_item->doc_new == NULL)
                     {
                         syslog (LOG_ERR, "XML: failed to parse \"%s\"", new_item->filename);
