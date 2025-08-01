@@ -1758,14 +1758,32 @@ sch_is_leaf_list (sch_node * node)
     return true;
 }
 
-char *
-sch_list_key (sch_node * node)
+GList *
+sch_list_keys (sch_node * node)
 {
-    char *key = NULL;
-
+    GList *keys = NULL;
     if (sch_is_list (node) && sch_node_child_first (sch_node_child_first (node)))
-        key = sch_name (sch_node_child_first (sch_node_child_first (node)));
-    return key;
+    {
+        xmlNode *xml = (xmlNode *) sch_node_child_first (node);
+        char *key = (char *) xmlGetProp (xml, (xmlChar *) "key");
+        if (key)
+        {
+            gchar **tokens = g_strsplit (key, " ", -1);
+            for (gchar **t = tokens; *t != NULL; t++)
+            {
+                keys = g_list_append (keys, g_strdup (*t));
+            }
+            g_strfreev (tokens);
+            free (key);
+        }
+        else
+        {
+            /* Fall-back to first node in the list */
+            key = sch_name (sch_node_child_first (sch_node_child_first (node)));
+            keys = g_list_append (NULL, key);
+        }
+    }
+    return keys;
 }
 
 bool
@@ -2912,6 +2930,9 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
         }
         else if (equals && sch_is_list (schema))
         {
+            /* Multiple keys are just the comma replaced with underscore before decoding */
+            for (char *p = equals; *p; p++)
+                if (*p == ',') *p = '_';
             child = APTERYX_NODE (NULL, sch_key_decode (equals));
             g_node_prepend (rnode, child);
             depth++;
@@ -3627,7 +3648,7 @@ sch_process_qnode (sch_instance *instance, GNode **qnode)
     sch_node *lschema;
     sch_node *parent;
     char *parent_name;
-    char *key;
+    GList *keys;
 
     node_path = apteryx_node_path (node);
     lschema = sch_lookup (instance, node_path);
@@ -3642,8 +3663,9 @@ sch_process_qnode (sch_instance *instance, GNode **qnode)
             if (g_strcmp0 (parent_name, "*") == 0)
             {
                 parent = sch_node_parent (parent);
-                key = sch_list_key (parent);
-                if (key && g_strcmp0 (key, APTERYX_NAME (node)) == 0)
+                keys = sch_list_keys (parent);
+                if (keys && g_list_length(keys) &&
+                    g_strcmp0 ((char *) keys->data, APTERYX_NAME (node)) == 0)
                 {
                     if (node->next)
                     {
@@ -3655,7 +3677,7 @@ sch_process_qnode (sch_instance *instance, GNode **qnode)
                         g_free (node_path);
                     }
                 }
-                g_free (key);
+                g_list_free_full (keys, g_free);
             }
             g_free (parent_name);
         }
@@ -3668,7 +3690,6 @@ void
 sch_add_defaults (sch_instance *instance, sch_node *rschema, GNode **tree, GNode **query,
                   GNode *rnode, GNode *qnode, int rdepth, int qdepth, int flags)
 {
-
     if (*tree && rdepth == 1)
         sch_traverse_tree (instance, rschema, rnode, flags);
     else
@@ -3678,7 +3699,7 @@ sch_add_defaults (sch_instance *instance, sch_node *rschema, GNode **tree, GNode
         GNode *lnode = qnode;
         sch_node *lschema;
         char *schema_name;
-        char *key = NULL;
+        GList *keys = NULL;
         bool exact = false;
 
         /* Cleanup the query tree trailing wildcard '*' nodes from the query except
@@ -3691,7 +3712,7 @@ sch_add_defaults (sch_instance *instance, sch_node *rschema, GNode **tree, GNode
         {
             if (sch_is_list (lschema))
             {
-                key = sch_list_key (lschema);
+                keys = sch_list_keys (lschema);
                 break;
             }
             lschema = sch_node_parent (lschema);
@@ -3744,13 +3765,14 @@ sch_add_defaults (sch_instance *instance, sch_node *rschema, GNode **tree, GNode
                     g_node_unlink (child);
                     apteryx_free_tree (child);
                 }
-                if (key)
+                if (keys)
                 {
                     GNode *defaults_tree = NULL;
 
                     /* Query the database with a query that returns the list key information for each match. This is required
                     * as some queries return no information for the original query, but would if defaults are included */
-                    g_node_append_data (dnode, g_strdup (key));
+                    for (GList *key = keys; key != NULL; key = key->next)
+                        g_node_append_data (dnode, g_strdup ((char *)key->data));
                     defaults_tree = apteryx_query (query_copy);
 
                     /* Merge the result that contains every list element with the defaults to be added */
@@ -3790,7 +3812,7 @@ sch_add_defaults (sch_instance *instance, sch_node *rschema, GNode **tree, GNode
             *query = NULL;
         }
         apteryx_free_tree (query_copy);
-        g_free (key);
+        g_list_free_full (keys, g_free);
         g_free (schema_name);
     }
 }
@@ -4136,7 +4158,7 @@ sch_gnode_to_json (sch_instance * instance, sch_node * schema, GNode * node, int
 /* List keys should not have a '/' in them.
    Instead we escape it as %2F when storing in apteryx */
 static char *
-generate_list_key_from_value (const char *value)
+escape_slash (const char *value)
 {
     GString *key = g_string_new (NULL);
     while (*value)
@@ -4150,18 +4172,40 @@ generate_list_key_from_value (const char *value)
     return g_string_free (key, false);
 }
 
+static char *
+generate_list_key_from_json (int flags, GList *keys, json_t *json)
+{
+    GString *lkey = g_string_new (NULL);
+    for (GList *key = keys; key != NULL; key = key->next)
+    {
+        json_t *kjson = json_object_get (json, (char *) key->data);
+        if (!kjson)
+        {
+            ERROR (flags, SCH_E_KEYMISSING, "List missing key \"%s\"\n", (char *) key->data);
+            g_string_free (lkey, true);
+            return NULL;
+        }
+        char *value = decode_json_type (kjson);
+        char *escaped = escape_slash (value);
+        if (lkey->len)
+            g_string_append_c (lkey, '_');
+        g_string_append (lkey, escaped);
+        free (escaped);
+        free (value);
+    }
+    return g_string_free (lkey, false);
+}
+
 static GNode *
 _sch_json_to_gnode (sch_instance * instance, sch_node * schema, xmlNs *ns,
                    json_t * json, const char *name, int flags, int depth)
 {
     char *colon;
     json_t *child;
-    json_t *kchild;
     const char *cname;
     size_t index;
     GNode *tree = NULL;
     GNode *node = NULL;
-    char *key = NULL;
     char *value;
 
     /* Check for a change in namespace */
@@ -4214,7 +4258,7 @@ _sch_json_to_gnode (sch_instance * instance, sch_node * schema, xmlNs *ns,
                     return NULL;
                 }
             }
-            char *lkey = generate_list_key_from_value (value);
+            char *lkey = escape_slash (value);
             APTERYX_LEAF (tree, lkey, value);
             DEBUG (flags, "%*s%s = %s\n", depth * 2, " ", lkey, value);
         }
@@ -4222,9 +4266,8 @@ _sch_json_to_gnode (sch_instance * instance, sch_node * schema, xmlNs *ns,
     /* LIST */
     else if (sch_is_list (schema) && json_is_array (json))
     {
-        /* Get the key for this list */
-        char *kname = NULL;
-        key = sch_name (sch_node_child_first (sch_node_child_first (schema)));
+        /* Get the keys for this list */
+        GList *keys = sch_list_keys (schema);
         DEBUG (flags, "%*s%s%s\n", depth * 2, " ", depth ? "" : "/", name);
         depth++;
         tree = node = APTERYX_NODE (NULL, g_strdup (name));
@@ -4240,22 +4283,14 @@ _sch_json_to_gnode (sch_instance * instance, sch_node * schema, xmlNs *ns,
             const char *subname;
 
             /* Get the key name for this json object and create a GNode with it */
-            kchild = json_object_get (child, key);
-            if (kchild)
+            char *lkey = generate_list_key_from_json (flags, keys, child);
+            if (!lkey)
             {
-                kname = decode_json_type (kchild);
-            }
-            if (!kname)
-            {
-                ERROR (flags, SCH_E_KEYMISSING, "List \"%s\" missing key \"%s\"\n", name, key);
                 apteryx_free_tree (tree);
-                g_free (key);
+                g_list_free_full (keys, g_free);
                 return NULL;
             }
-
-            char *lkey = generate_list_key_from_value (kname);
             node = APTERYX_NODE (tree, lkey);
-            free (kname);
             DEBUG (flags, "%*s%s\n", depth * 2, " ", APTERYX_NAME (node));
 
             /* Prepend each key-value pair of this object into the node */
@@ -4265,13 +4300,13 @@ _sch_json_to_gnode (sch_instance * instance, sch_node * schema, xmlNs *ns,
                 if (!cn)
                 {
                     apteryx_free_tree (tree);
-                    g_free (key);
+                    g_list_free_full (keys, g_free);
                     return NULL;
                 }
                 g_node_prepend (node, cn);
             }
         }
-        g_free (key);
+        g_list_free_full (keys, g_free);
     }
     /* CONTAINER */
     else if (!sch_is_leaf (schema))
