@@ -820,6 +820,7 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
                 else:
                     res.attrib["mode"] = "r"
             if key is not None:
+                res.attrib["key"] = key.arg
                 res.attrib["help"] = "The " + node.arg + " entry with key " + key.arg
             else:
                 res.attrib["help"] = "List of " + node.arg

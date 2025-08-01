@@ -92,7 +92,7 @@
     </NODE>
     <NODE name="animals">
       <NODE name="animal" help="This is a list of animals">
-        <NODE name="*" help="The animal entry with key name">
+        <NODE name="*" key="name" help="The animal entry with key name">
           <NODE name="name" mode="rw" help="This is the name of the animal"/>
           <NODE name="type" idref_href="http://test.com/ns/yang/animal-types" idref_prefix="a-types" idref_module="animal-testing-types" mode="rw" default="big" help="This is the type of the animal">
             <VALUE name="big" value="1"/>
@@ -157,6 +157,20 @@
               </NODE>
             </NODE>
           </NODE>
+        </NODE>
+      </NODE>
+    </NODE>
+    <NODE name="friends" help="This is a list with 2 keys">
+      <NODE name="*" mode="rw" key="name age" help="The friends entry with key name age">
+        <NODE name="name" mode="rw" help="name"/>
+        <NODE name="age" mode="rw" range="0..100" help="age"/>
+        <NODE name="gender" mode="rw" default="male" help="gender">
+          <VALUE name="male" value="male"/>
+          <VALUE name="female" value="female"/>
+        </NODE>
+        <NODE name="alive" mode="rw" default="true" help="alive">
+          <VALUE name="true" value="true"/>
+          <VALUE name="false" value="false"/>
         </NODE>
       </NODE>
     </NODE>

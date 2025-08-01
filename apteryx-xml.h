@@ -89,7 +89,7 @@ char *sch_path (sch_node * node);
 bool sch_is_leaf (sch_node * node);
 bool sch_is_list (sch_node * node);
 bool sch_is_leaf_list (sch_node * node);
-char *sch_list_key (sch_node * node);
+GList *sch_list_keys (sch_node * node);
 bool sch_is_readable (sch_node * node);
 bool sch_is_writable (sch_node * node);
 bool sch_is_executable (sch_node * node);
