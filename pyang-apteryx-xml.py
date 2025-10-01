@@ -32,7 +32,6 @@ from collections import OrderedDict
 
 from pyang import error, plugin, statements
 
-
 def pyang_plugin_init():
     plugin.register_plugin(ApteryxXMLPlugin())
 
@@ -679,7 +678,7 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
     def value_attrib_identityref(self, res, ntype):
         if hasattr(ntype, "i_type_spec") and hasattr(ntype.i_type_spec, "idbases"):
             for ch in ntype.i_type_spec.idbases:
-                sp_parts = ch.arg.split(':', 2);
+                sp_parts = ch.arg.split(':', 2)
                 if len(sp_parts) == 1:
                     if ch.i_module is not None and ch.i_module.i_prefix is not None:
                         res.attrib["idref_self"] = ch.i_module.i_prefix
@@ -748,6 +747,29 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
                 patt = f"{rfr}"
             return patt
         return None
+
+    def union_pattern (self,ntype):
+        patterns = [] 
+        if ntype.arg == 'union': 
+            uniontypes = ntype.search('type') 
+            for uniontype in uniontypes: 
+                ut = uniontype 
+                if uniontype.i_typedef: 
+                    ut = uniontype.i_typedef.search_one("type") 
+                if ut is not None: 
+                    npatt = ut.search_one("pattern") 
+
+                    if npatt:
+                        patterns.append(f"({npatt.arg})")
+                    else:
+                        utpatt = self.type_to_pattern(ut)
+                        if utpatt is not None:
+                            patterns.append(f"({utpatt})")
+                        else:
+                            nested = self.union_pattern(ut)
+                            if nested:
+                                patterns.append(f"({'|'.join(nested)})")
+        return patterns  
 
     def sample_element(self, node, parent, module, path):
         if path is None:
@@ -833,6 +855,7 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
                 npatt = ntype.search_one("pattern")
                 if npatt is not None:
                     res.attrib["pattern"] = npatt.arg
+
             elif ntype.arg == "boolean":
                 value = etree.SubElement(res, "{" + ns.arg + "}VALUE")
                 value.attrib = OrderedDict()
@@ -896,21 +919,8 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
                     # range="0..18446744073709551615"
                     res.attrib["pattern"] = "([0-9]{1,19}|1([0-7][0-9]{18}|8([0-3][0-9]{17}|4([0-3][0-9]{16}|4([0-5][0-9]{15}|6([0-6][0-9]{14}|7([0-3][0-9]{13}|4([0-3][0-9]{12}|40([0-6][0-9]{10}|7([0-2][0-9]{9}|3([0-6][0-9]{8}|70([0-8][0-9]{6}|9([0-4][0-9]{5}|5([0-4][0-9]{4}|5(0[0-9]{3}|1([0-5][0-9]{2}|6(0[0-9]|1[0-5])))))))))))))))))"
             elif ntype.arg == 'union':
-                uniontypes = ntype.search('type')
-                upatt = []
-                for uniontype in uniontypes:
-                    ut = uniontype
-                    if uniontype.i_typedef:
-                        ut = uniontype.i_typedef.search_one("type")
-                    if ut is not None:
-                        npatt = ut.search_one("pattern")
-                        if npatt is not None:
-                            upatt.append(f"(^{npatt.arg}$)")
-                        else:
-                            utpatt = self.type_to_pattern(ut)
-                            if utpatt is not None:
-                                upatt.append(f"(^{utpatt}$)")
+                patterns = self.union_pattern(ntype)
+                if len(patterns) > 0:
+                    res.attrib["pattern"] = '|'.join(patterns)
 
-                if len(upatt) > 0:
-                    res.attrib["pattern"] = "|".join(upatt)
         return res, module, path

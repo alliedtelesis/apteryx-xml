@@ -114,7 +114,6 @@ def test_xml_uint64():
     assert_xml_equal(output, expected)
 
 
-@pytest.mark.skip(reason="Not supported yet")
 def test_xml_decimal64():
     yang = Module("example", children=[Leaf("test", "decimal64", fraction_digits=2, value_range="-100.00..100.00")]).render()
     print(yang)
@@ -130,12 +129,11 @@ def test_xml_pattern_string():
     output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
 
-
 @pytest.mark.skip(reason="Not supported yet")
 def test_xml_two_pattern_string():
     yang = Module("example", children=[Leaf("test", "string", pattern=["[a-z]+", "[0-9]+"])]).render()
     print(yang)
-    expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "pattern": "([a-z]+)|([0-9]+)"}])
+    expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "pattern": "([a-z]+)([0-9]+)"}])
     output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
 
@@ -168,7 +166,6 @@ def test_xml_union_strings_one_pattern():
     assert_xml_equal(output, expected)
 
 
-@pytest.mark.skip(reason="Needs start and end delimiters removed")
 def test_xml_union_strings():
     yang = Module("example", children=[Leaf("test", "union", union_types=['string { pattern "1|2"; }', 'string { pattern "3|4"; }'])]).render()
     print(yang)
@@ -177,7 +174,6 @@ def test_xml_union_strings():
     assert_xml_equal(output, expected)
 
 
-@pytest.mark.skip(reason="Needs start and end delimiters removed")
 def test_xml_union_int():
     yang = Module("example", children=[Leaf("test", "union", union_types=['int8', 'uint8'])]).render()
     print(yang)
@@ -186,7 +182,6 @@ def test_xml_union_int():
     assert_xml_equal(output, expected)
 
 
-@pytest.mark.skip(reason="We dont handle typdef within union")
 def test_xml_union_union_strings():
     yang = Module("example", children=[
         Typedef("type1", "union", union_types=[
@@ -203,6 +198,6 @@ def test_xml_union_union_strings():
         ])
     ]).render()
     print(yang)
-    expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "pattern": "((1|2)|(3|4))|(5|6)"}])
+    expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "pattern": "((1|2)|(3|4))|((5|6)|(7|8))"}])
     output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
