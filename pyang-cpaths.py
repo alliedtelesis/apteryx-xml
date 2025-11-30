@@ -37,17 +37,20 @@ class PathPlugin(plugin.PyangPlugin):
     def emit(self, ctx, modules, fd):
         self.prefix_default = ctx.opts.prefix_default
         self.prefix = {}
-        if (self.prefix_default):
-            for module in modules:
-                pref = module.search_one('prefix')
-                if pref is not None:
+        self.leaf_prefix = {}
+        for module in modules:
+            pref = module.search_one('prefix')
+            if pref is not None:
+                self.leaf_prefix[module] = pref.arg
+                if self.prefix_default:
                     self.prefix[module] = pref.arg
 
         for module in modules:
             prefix = self.prefix.get(module)
+            leaf_prefix = self.leaf_prefix.get(module)
             children = [child for child in module.i_children]
             for child in children:
-                print_node(child, module, prefix, fd, ctx)
+                print_node(child, module, prefix, fd, ctx, leaf_prefix)
         fd.write('\n')
 
 
@@ -78,7 +81,7 @@ def mk_path_str_define(s, prefix, level):
         return p + "/" + s.arg
 
 
-def print_node(node, module, prefix, fd, ctx, level=0, strip=0):
+def print_node(node, module, prefix, fd, ctx, leaf_prefix, level=0, strip=0):
     # print('TYPE:' + node.keyword + 'LEVEL:' + str(level) + 'STRIP:' + str(strip))
 
     # No need to include these nodes
@@ -92,7 +95,7 @@ def print_node(node, module, prefix, fd, ctx, level=0, strip=0):
     # Skip over choice and case
     if node.keyword in ['choice', 'case']:
         for child in node.i_children:
-            print_node(child, module, prefix, fd, ctx, level, strip)
+            print_node(child, module, prefix, fd, ctx, leaf_prefix, level, strip)
         return
 
     # Create path value
@@ -124,6 +127,14 @@ def print_node(node, module, prefix, fd, ctx, level=0, strip=0):
 
     # Ouput define
     fd.write('#define ' + define + ' "' + value + '"\n')
+
+    # For leaf nodes, output a define for just the name of the leaf
+    if leaf_prefix is not None and node.keyword in ('leaf', 'leaf-list'):
+        leaf_sym = leaf_prefix.upper() + '_LEAF_' + node.arg.upper()
+        leaf_sym = leaf_sym.replace('-', '_')
+        fd.write(f'#ifndef {leaf_sym}\n')
+        fd.write(f'#define {leaf_sym} "{node.arg}"\n')
+        fd.write(f'#endif\n')
 
     ntype = node.search_one('type')
     if ntype is not None and ntype.arg in module.i_typedefs:
@@ -194,4 +205,4 @@ def print_node(node, module, prefix, fd, ctx, level=0, strip=0):
     # Process children
     if hasattr(node, 'i_children'):
         for child in node.i_children:
-            print_node(child, module, prefix, fd, ctx, level + 1, strip)
+            print_node(child, module, prefix, fd, ctx, leaf_prefix, level + 1, strip)
