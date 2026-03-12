@@ -762,6 +762,46 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
             return patt
         return None
 
+    def union_enum_values(self, ntype, res, ns):
+        """Generate VALUE elements for enumeration types within a union."""
+        if ntype.arg != 'union':
+            return
+        uniontypes = ntype.search('type')
+        for uniontype in uniontypes:
+            ut = uniontype
+            if uniontype.i_typedef:
+                ut = uniontype.i_typedef.search_one("type")
+            if ut is not None:
+                if ut.arg == "enumeration":
+                    count = 0
+                    for enum in ut.substmts:
+                        if enum.keyword != "enum":
+                            continue
+                        value = etree.SubElement(res, "{" + ns.arg + "}VALUE")
+                        value.attrib = OrderedDict()
+                        value.attrib["name"] = enum.arg
+                        val = enum.search_one('value')
+                        if val is not None:
+                            value.attrib["value"] = val.arg
+                            try:
+                                val_int = int(val.arg)
+                            except ValueError:
+                                val_int = None
+                            if val_int is not None:
+                                count = val_int
+                        else:
+                            if self.enum_name:
+                                value.attrib["value"] = value.attrib["name"]
+                            else:
+                                value.attrib["value"] = str(count)
+                        count = count + 1
+                        descr = enum.search_one('description')
+                        if descr is not None:
+                            descr.arg = descr.arg.replace('\r', ' ').replace('\n', ' ')
+                            value.attrib["help"] = descr.arg
+                elif ut.arg == "union":
+                    self.union_enum_values(ut, res, ns)
+
     def union_pattern (self,ntype):
         patterns = [] 
         if ntype.arg == 'union': 
@@ -943,5 +983,6 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
                 patterns = self.union_pattern(ntype)
                 if len(patterns) > 0:
                     res.attrib["pattern"] = '|'.join(patterns)
+                self.union_enum_values(ntype, res, ns)
 
         return res, module, path
