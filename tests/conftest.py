@@ -57,14 +57,18 @@ def assert_xml_equal(actual, expected):
         raise AssertionError(f"XML mismatch:\n{diff}")
 
 
-def pyang(yang, format="tree"):
+def pyang(yang, format="tree", extra_args=None):
     output = ""
     with tempfile.NamedTemporaryFile(dir="/tmp", delete=False, mode="w", suffix=".yang") as tmp_file:
         tmp_file.write(yang)
         tmp_file.flush()
         yang_file = tmp_file.name
+        cmd = ["pyang", "--plugindir", Path(__file__).resolve().parent.parent, "-f", format]
+        if extra_args:
+            cmd.extend(extra_args)
+        cmd.append(str(yang_file))
         result = subprocess.run(
-            ["pyang", "--plugindir", Path(__file__).resolve().parent.parent, "-f", format, str(yang_file)],
+            cmd,
             capture_output=True,
             text=True
         )

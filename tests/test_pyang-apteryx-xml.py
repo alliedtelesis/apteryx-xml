@@ -201,6 +201,28 @@ def test_xml_union_union_strings():
     output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
 
+def test_xml_enum():
+    yang = Module("example", children=[Leaf("test", "enumeration", enumeration=["up", "down", "testing"])]).render()
+    print(yang)
+    expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "children": [
+        {"tag": "VALUE", "name": "up", "value": "0"},
+        {"tag": "VALUE", "name": "down", "value": "1"},
+        {"tag": "VALUE", "name": "testing", "value": "2"},
+    ]}])
+    output = pyang(yang, format="apteryx-xml")
+    assert_xml_equal(output, expected)
+
+def test_xml_enum_names():
+    yang = Module("example", children=[Leaf("test", "enumeration", enumeration=["up", "down", "testing"])]).render()
+    print(yang)
+    expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "children": [
+        {"tag": "VALUE", "name": "up", "value": "up"},
+        {"tag": "VALUE", "name": "down", "value": "down"},
+        {"tag": "VALUE", "name": "testing", "value": "testing"},
+    ]}])
+    output = pyang(yang, format="apteryx-xml", extra_args=["--enum-name"])
+    assert_xml_equal(output, expected)
+
 def test_xml_union_range_enum():
     yang = Module("example", children=[Leaf("test", "union", union_types=[
             'uint16 { range "0 | 1..35537 | 35539..35540"; }',
