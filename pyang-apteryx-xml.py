@@ -24,6 +24,7 @@ Output paths in Apteryx XML file format
 # all code submitted there is done so under GPL
 
 import io
+import re
 import sys
 import os
 import optparse
@@ -725,12 +726,25 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
         if ntype.arg in ["int8", "int16", "int32", "uint8", "uint16", "uint32"]:
             range = ntype.search_one("range")
             if range is not None:
-                limits = range.arg.replace('..', '.').split('.')
-                l0 = int(limits[0])
-                l1 = int(limits[1])
-                if l0 > l1:
-                    l1, l0 = l0, l1
-                rfr = RegexForRange(l0, l1)
+                # Handles split ranges like "0 | 10..525600"
+                range_parts = [p.strip() for p in range.arg.split('|')]
+                rfr_list = []
+                for part in range_parts:
+                    if '..' in part:
+                        limits = part.split('..')
+                        l0 = int(limits[0].strip())
+                        l1 = int(limits[1].strip())
+                        if l0 > l1:
+                            l1, l0 = l0, l1
+                        rfr_list.append(f"{RegexForRange(l0, l1)}")
+                    else:
+                        val = int(part.strip())
+                        rfr_list.append(f"{RegexForRange(val, val)}")
+                if len(rfr_list) == 1:
+                    patt = rfr_list[0]
+                else:
+                    patt = '|'.join(rfr_list)
+                return patt
             elif ntype.arg == "int8":
                 rfr = RegexForRange(-128, 127)
             elif ntype.arg == "int16":
@@ -761,6 +775,13 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
 
                     if npatt:
                         patterns.append(f"({npatt.arg})")
+                    elif ut.arg == "enumeration":
+                        enum_names = []
+                        for enum in ut.substmts:
+                            if enum.keyword == "enum":
+                                enum_names.append(re.escape(enum.arg))
+                        if enum_names:
+                            patterns.append('(' + '|'.join(enum_names) + ')')
                     else:
                         utpatt = self.type_to_pattern(ut)
                         if utpatt is not None:

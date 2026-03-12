@@ -181,7 +181,6 @@ def test_xml_union_int():
     output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
 
-
 def test_xml_union_union_strings():
     yang = Module("example", children=[
         Typedef("type1", "union", union_types=[
@@ -199,5 +198,14 @@ def test_xml_union_union_strings():
     ]).render()
     print(yang)
     expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "pattern": "((1|2)|(3|4))|((5|6)|(7|8))"}])
+    output = pyang(yang, format="apteryx-xml")
+    assert_xml_equal(output, expected)
+
+def test_xml_union_range_enum():
+    yang = Module("example", children=[Leaf("test", "union", union_types=[
+            'uint16 { range "0 | 1..35537 | 35539..35540"; }',
+            'enumeration { enum  none { description "do not use this feature"; } } '])]).render()
+    print(yang)
+    expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "pattern": "(0|([1-9][0-9]{0,3}|[12][0-9]{4}|3[0-4][0-9]{3}|35[0-4][0-9]{2}|355[0-2][0-9]|3553[0-7])|355(39|40))|(none)"}])
     output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
