@@ -17,7 +17,7 @@
       </NODE>
       <NODE name="empty" help="an empty container">
       </NODE>
-      <NODE name="priority" mode="rw" help="integer" range="-5..-1|1..5|99"/>
+      <NODE name="priority" mode="rw" help="integer" range="-5..-1 | 1..5 | 99"/>
       <NODE name="writeonly" mode="w" help="A write only field"/>
       <NODE name="readonly" mode="r" default="yes" help="A read only field">
         <VALUE name="yes" value="0" help="This is read only"/>

@@ -2044,6 +2044,18 @@ _sch_validate_pattern (sch_node * node, const char *value, int flags)
     char *range = (char *) xmlGetProp (node, (xmlChar *) "range");
     if (range)
     {
+        /* Remove whitespaces for range value */
+        char *dst = range;
+        char *src = range;
+
+        while (*src) {
+            if (!isspace((unsigned char)*src)) {
+                *dst++ = *src;
+            }
+            src++;
+        }
+        *dst = '\0';
+
         bool vint_neg, min_neg, max_neg;
         uint64_t vint, min, max;
 
