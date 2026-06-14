@@ -131,6 +131,7 @@
           <NODE name="claws" when="../../wombat" mode="rw" help="claws per paw"/>
           <NODE name="friend" must="../../cat" mode="rw" help="animal friend"/>
           <NODE name="n-type" when="derived-from-or-self(./type, 'a-types:type')" mode="rw" help="animal n-type"/>
+          <NODE name="legs" when="starts-with(../name, 'c')" mode="rw" help="number of legs"/>
         </NODE>
       </NODE>
     </NODE>
