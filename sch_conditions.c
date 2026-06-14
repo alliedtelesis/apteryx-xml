@@ -607,6 +607,43 @@ sch_function_count (sch_instance *instance, GNode *root, char *path, char *step_
 }
 
 static void
+sch_function_starts_with (sch_instance *instance, GNode *root, char *path,
+                           char *step_path, xpath_node *xnode, cond_result *presult,
+                           int depth, int *flags)
+{
+    GList *iter;
+    xpath_node *node;
+    cond_result arg1 = { };
+    cond_result arg2 = { };
+    char *str = NULL;
+    char *prefix = NULL;
+
+    presult->result = false;
+    if (g_list_length (xnode->arg_list) != 2)
+        return;
+
+    iter = g_list_first (xnode->arg_list);
+    node = (xpath_node *) iter->data;
+    sch_process_xnode (instance, root, path, step_path, node, &arg1, depth + 1, flags);
+
+    iter = g_list_next (iter);
+    node = (xpath_node *) iter->data;
+    sch_process_xnode (instance, root, path, step_path, node, &arg2, depth + 1, flags);
+
+    /* For step nodes, step_value contains the actual data value rather than the path */
+    str = arg1.step_value ? arg1.step_value : arg1.value;
+    prefix = arg2.value;
+
+    if (str && prefix)
+        presult->result = g_str_has_prefix (str, prefix);
+
+    g_free (arg1.value);
+    g_free (arg1.step_value);
+    g_free (arg2.value);
+    g_free (arg2.step_value);
+}
+
+static void
 sch_process_xnode (sch_instance *instance, GNode *root, char *path, char *step_path,
                    xpath_node *xnode, cond_result *presult, int depth, int *flags)
 {
@@ -673,6 +710,12 @@ sch_process_xnode (sch_instance *instance, GNode *root, char *path, char *step_p
         {
             sch_process_arg_list (instance, root, path, step_path, xnode, &result,
                                   depth, flags);
+            presult->result = result.result;
+        }
+        else if (g_strcmp0 (xnode->name, "starts-with") == 0)
+        {
+            sch_function_starts_with (instance, root, path, step_path, xnode,
+                                      &result, depth, flags);
             presult->result = result.result;
         }
         break;
