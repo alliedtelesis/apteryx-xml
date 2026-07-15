@@ -79,6 +79,7 @@ sch_ns *sch_lookup_ns (sch_instance * instance, sch_node *schema, const char *na
 sch_node *sch_ns_node_child (sch_ns *ns, sch_node * parent, const char *child);
 
 char *sch_name (sch_node * node);
+char *sch_name_no_ns (sch_node * node);
 char *sch_model (sch_node * node, bool ignore_ancestors);
 char *sch_organization (sch_node * node);
 char *sch_version (sch_node * node);

@@ -1568,19 +1568,31 @@ sch_preorder_next(sch_node *current, sch_node *root) {
     return next == root ? NULL : next;
 }
 
-char *
-sch_name (sch_node * node)
+static char *
+_sch_name (sch_node * node, bool add_ns)
 {
     xmlNode *n = (xmlNode *) node;
     sch_instance *instance = n ? n->doc->_private : NULL;
     char *name = (char *) xmlGetProp (n, (xmlChar *) "name");
-    if (!_sch_ns_native (instance, n->ns) && !sch_node_parent (sch_node_parent (node)))
+    if (!_sch_ns_native (instance, n->ns) && !sch_node_parent (sch_node_parent (node)) && add_ns)
     {
         char *_name = g_strdup_printf ("%s:%s", n->ns->prefix, name);
         free (name);
         name = _name;
     }
     return name;
+}
+
+char *
+sch_name (sch_node * node)
+{
+    return _sch_name (node, true);
+}
+
+char *
+sch_name_no_ns (sch_node *node)
+{
+    return _sch_name (node, false);
 }
 
 /* Ignoring ancestors allows checking that this is a node with the model data directly attached. */
