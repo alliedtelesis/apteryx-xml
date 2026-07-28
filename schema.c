@@ -1802,6 +1802,133 @@ sch_list_keys (sch_node * node)
     return keys;
 }
 
+/* Returns the value of a list's "unique" attribute (space-separated, or 
+ * "|"-delimited for multiple constraints), or NULL if it isn't one. */
+char *
+sch_node_unique (sch_node *node)
+{
+    if (sch_is_list (node) && sch_node_child_first (node))
+    {
+        xmlNode *xml = (xmlNode *) sch_node_child_first (node);
+        return (char *) xmlGetProp (xml, (xmlChar *) "unique");
+    }
+    return NULL;
+}
+
+/* Collect the apteryx path of every list entry found "depth" key segments below node. */
+static void
+_sch_collect_entry_paths (GNode *node, const char *base_path, int depth, GList **paths)
+{
+    if (depth <= 0)
+    {
+        *paths = g_list_prepend (*paths, g_strdup (base_path));
+        return;
+    }
+    for (GNode *child = node->children; child; child = child->next)
+    {
+        char *child_path = g_strdup_printf ("%s/%s", base_path, APTERYX_NAME (child));
+        _sch_collect_entry_paths (child, child_path, depth - 1, paths);
+        g_free (child_path);
+    }
+}
+
+/* Validate new_paths against list_schema's unique constraint, checking
+ * each entry against both apteryx's existing entries and the other new
+ * entries. */
+bool
+sch_check_unique (sch_node *list_schema, const char *list_path, GList *new_paths,
+                  sch_unique_leaf_fn leaf_fn, void *arg, int flags)
+{
+    char *unique_str = sch_node_unique (list_schema);
+    if (!unique_str)
+        return true;
+
+    /* Handle both apteryx's existing entries under list_path and new_paths. */
+    GNode *all_entries = apteryx_get_tree (list_path);
+    GHashTable *other_paths = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+    if (all_entries)
+    {
+        GList *ex_paths = NULL;
+        _sch_collect_entry_paths (all_entries, list_path, 1, &ex_paths);
+        for (GList *p = ex_paths; p; p = g_list_next (p))
+            g_hash_table_add (other_paths, p->data);
+        g_list_free (ex_paths);
+        apteryx_free_tree (all_entries);
+    }
+
+    for (GList *p = new_paths; p; p = g_list_next (p))
+    {
+        if (!g_hash_table_contains (other_paths, p->data))
+        {
+            g_hash_table_add (other_paths, g_strdup ((char *) p->data));
+        }
+    }
+
+    bool valid = true;
+    char **constraints = g_strsplit (unique_str, " | ", -1);
+    for (GList *np = new_paths; np && valid; np = g_list_next (np))
+    {
+        const char *entry_path = (const char *) np->data;
+        for (int ci = 0; constraints[ci] && valid; ci++)
+        {
+            char **leaf_names = g_strsplit (constraints[ci], " ", -1);
+            int n_leaves = g_strv_length (leaf_names);
+
+            char **new_values = g_new0 (char *, n_leaves + 1);
+            for (int j = 0; j < n_leaves; j++)
+            {
+                new_values[j] = leaf_fn (entry_path, leaf_names[j], arg);
+            }
+
+            GHashTableIter iter;
+            gpointer key;
+            g_hash_table_iter_init (&iter, other_paths);
+            while (valid && g_hash_table_iter_next (&iter, &key, NULL))
+            {
+                const char *other_path = (const char *) key;
+                if (g_strcmp0 (other_path, entry_path) == 0)
+                {
+                    continue;
+                }
+
+                bool all_match = true;
+                for (int j = 0; j < n_leaves && all_match; j++)
+                {
+                    if (!new_values[j])
+                    {
+                        all_match = false;
+                        break;
+                    }
+                    char *ov = leaf_fn (other_path, leaf_names[j], arg);
+                    if (!ov || g_strcmp0 (new_values[j], ov) != 0)
+                    {
+                        all_match = false;
+                    }
+                    g_free (ov);
+                }
+
+                if (all_match)
+                {
+                    ERROR (flags, SCH_E_UNIQUEVIOLATION,
+                          "Entry \"%s\" violates unique constraint \"%s\" (conflicts with \"%s\")",
+                          entry_path, constraints[ci], other_path);
+                    valid = false;
+                }
+            }
+
+            for (int j = 0; j < n_leaves; j++)
+                g_free (new_values[j]);
+            g_free (new_values);
+            g_strfreev (leaf_names);
+        }
+    }
+
+    g_strfreev (constraints);
+    g_hash_table_destroy (other_paths);
+    free (unique_str);
+    return valid;
+}
+
 bool
 sch_is_readable (sch_node * node)
 {

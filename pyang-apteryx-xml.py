@@ -320,7 +320,7 @@ def regex_for_range(start, end, verbose=False):
                     t2.print_tree()
                 s2 = lead_zeros + t2.collapse()
                 if len(s2) < len(s):
-                    # Only use if it's actually shorter.
+                   # Only use if it's actually shorter.
                     s = s2
                 if verbose:
                     print('Turning the parse tree into a regex yields:')
@@ -907,6 +907,9 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
                 res.attrib["help"] = "The " + node.arg + " entry with key " + key.arg
             else:
                 res.attrib["help"] = "List of " + node.arg
+            unique_stmts = node.search("unique")
+            if unique_stmts:
+                res.attrib["unique"] = " | ".join(u.arg for u in unique_stmts)
 
         ntype = node.search_one("type")
         if ntype and ntype.i_typedef is not None:
@@ -986,3 +989,4 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
                 self.union_enum_values(ntype, res, ns)
 
         return res, module, path
+
