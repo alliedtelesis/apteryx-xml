@@ -1802,7 +1802,7 @@ sch_list_keys (sch_node * node)
     return keys;
 }
 
-/* Returns the value of a list's "unique" attribute (space-separated, or 
+/* Returns the value of a list's "unique" attribute (space-separated, or
  * "|"-delimited for multiple constraints), or NULL if it isn't one. */
 char *
 sch_node_unique (sch_node *node)

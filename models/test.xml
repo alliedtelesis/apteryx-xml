@@ -162,6 +162,17 @@
         </NODE>
       </NODE>
     </NODE>
+    <NODE name="gateways" help="This is a list with a nested unique constraint">
+      <NODE name="*" key="name" unique="config/sag/prefix" help="The gateway entry with key name">
+        <NODE name="name" mode="rw" help="name"/>
+        <NODE name="config" help="Configuration data for the gateway">
+          <NODE name="sag" help="Subnet anycast gateway settings">
+            <NODE name="prefix" mode="rw" help="Anycast prefix"/>
+            <NODE name="mac" mode="rw" help="Anycast mac"/>
+          </NODE>
+        </NODE>
+      </NODE>
+    </NODE>
     <NODE name="friends" help="This is a list with 2 keys">
       <NODE name="*" mode="rw" key="name age" unique="email" help="The friends entry with key name age">
         <NODE name="name" mode="rw" help="name"/>

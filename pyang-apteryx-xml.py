@@ -320,7 +320,7 @@ def regex_for_range(start, end, verbose=False):
                     t2.print_tree()
                 s2 = lead_zeros + t2.collapse()
                 if len(s2) < len(s):
-                   # Only use if it's actually shorter.
+                    # Only use if it's actually shorter.
                     s = s2
                 if verbose:
                     print('Turning the parse tree into a regex yields:')
