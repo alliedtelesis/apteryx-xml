@@ -32,6 +32,7 @@ typedef enum
     SCH_E_NOTWRITABLE,
     SCH_E_KEYMISSING,
     SCH_E_INVALIDQUERY,
+    SCH_E_UNIQUEVIOLATION,
 } sch_err;
 sch_err sch_last_err (void);
 const char * sch_last_errmsg (void);
@@ -91,6 +92,7 @@ bool sch_is_leaf (sch_node * node);
 bool sch_is_list (sch_node * node);
 bool sch_is_leaf_list (sch_node * node);
 GList *sch_list_keys (sch_node * node);
+char *sch_node_unique (sch_node *node);
 bool sch_is_readable (sch_node * node);
 bool sch_is_writable (sch_node * node);
 bool sch_is_executable (sch_node * node);
@@ -138,6 +140,10 @@ void sch_gnode_sort_children (sch_node * schema, GNode * parent);
 void sch_check_condition (sch_node *node, GNode *root, int flags, char **path, char **condition);
 bool sch_apply_conditions (sch_instance * instance, sch_node * schema, GNode *node, int flags);
 bool sch_trim_tree_by_depth (sch_instance *instance, sch_node *schema, GNode *node, int flags, int rdepth);
+
+typedef char *(*sch_unique_leaf_fn) (const char *entry_path, const char *leaf_name, void *arg);
+bool sch_check_unique (sch_node * list_schema, const char *list_path, GList *new_paths,
+                       sch_unique_leaf_fn leaf_fn, void *arg, int flags);
 
 #ifdef APTERYX_XML_JSON
 #include <jansson.h>

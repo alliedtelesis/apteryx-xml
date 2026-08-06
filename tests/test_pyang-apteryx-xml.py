@@ -1,6 +1,6 @@
 import pytest
 from conftest import assert_xml_equal, dict_to_xml, pyang
-from yang import Leaf, Module, Typedef
+from yang import Leaf, List, Module, Typedef
 
 
 def test_tree_basic_format():
@@ -181,6 +181,7 @@ def test_xml_union_int():
     output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
 
+
 def test_xml_union_union_strings():
     yang = Module("example", children=[
         Typedef("type1", "union", union_types=[
@@ -201,6 +202,7 @@ def test_xml_union_union_strings():
     output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
 
+
 def test_xml_enum():
     yang = Module("example", children=[Leaf("test", "enumeration", enumeration=["up", "down", "testing"])]).render()
     print(yang)
@@ -211,6 +213,7 @@ def test_xml_enum():
     ]}])
     output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
+
 
 def test_xml_enum_names():
     yang = Module("example", children=[Leaf("test", "enumeration", enumeration=["up", "down", "testing"])]).render()
@@ -223,6 +226,7 @@ def test_xml_enum_names():
     output = pyang(yang, format="apteryx-xml", extra_args=["--enum-name"])
     assert_xml_equal(output, expected)
 
+
 def test_xml_union_range_enum():
     yang = Module("example", children=[Leaf("test", "union", union_types=[
             'uint16 { range "0 | 1..35537 | 35539..35540"; }',
@@ -232,6 +236,7 @@ def test_xml_union_range_enum():
     output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
 
+
 def test_xml_union_range_enum_names():
     yang = Module("example", children=[Leaf("test", "union", union_types=[
             'uint16 { range "0 | 1..35537 | 35539..35540"; }',
@@ -239,4 +244,70 @@ def test_xml_union_range_enum_names():
     print(yang)
     expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "pattern": "(0|([1-9][0-9]{0,3}|[12][0-9]{4}|3[0-4][0-9]{3}|35[0-4][0-9]{2}|355[0-2][0-9]|3553[0-7])|355(39|40))|(none)", "children":[{"tag": "VALUE", "name": "none", "value": "none", "help": "do not use this feature"}]}])
     output = pyang(yang, format="apteryx-xml", extra_args=["--enum-name"])
+    assert_xml_equal(output, expected)
+
+
+def test_xml_list_unique_single():
+    yang = Module("example", children=[
+        List("users", keys=["name"], children=[
+            Leaf("name", "string"),
+            Leaf("email", "string"),
+        ], unique="email")
+    ]).render()
+    print(yang)
+    expected = dict_to_xml("example", [
+        {"name": "users", "children": [
+            {"name": "*", "key": "name", "help": "The users entry with key name", "unique": "email", "children": [
+                {"name": "name", "mode": "rw"},
+                {"name": "email", "mode": "rw"},
+            ]}
+        ]}
+    ])
+    output = pyang(yang, format="apteryx-xml")
+    assert_xml_equal(output, expected)
+
+
+def test_xml_list_unique_composite():
+    yang = Module("example", children=[
+        List("entries", keys=["id"], children=[
+            Leaf("id", "uint32"),
+            Leaf("city", "string"),
+            Leaf("street", "string"),
+        ], unique="city street")
+    ]).render()
+    print(yang)
+    expected = dict_to_xml("example", [
+        {"name": "entries", "children": [
+            {"name": "*", "key": "id", "help": "The entries entry with key id", "unique": "city street", "children": [
+                {"name": "id", "mode": "rw", "range": "0..4294967295"},
+                {"name": "city", "mode": "rw"},
+                {"name": "street", "mode": "rw"},
+            ]}
+        ]}
+    ])
+    output = pyang(yang, format="apteryx-xml")
+    assert_xml_equal(output, expected)
+
+
+def test_xml_list_unique_multiple():
+    yang = Module("example", children=[
+        List("users", keys=["name"], children=[
+            Leaf("name", "string"),
+            Leaf("email", "string"),
+            Leaf("city", "string"),
+            Leaf("street", "string"),
+        ], unique=["email", "city street"])
+    ]).render()
+    print(yang)
+    expected = dict_to_xml("example", [
+        {"name": "users", "children": [
+            {"name": "*", "key": "name", "help": "The users entry with key name", "unique": "email | city street", "children": [
+                {"name": "name", "mode": "rw"},
+                {"name": "email", "mode": "rw"},
+                {"name": "city", "mode": "rw"},
+                {"name": "street", "mode": "rw"},
+            ]}
+        ]}
+    ])
+    output = pyang(yang, format="apteryx-xml")
     assert_xml_equal(output, expected)
