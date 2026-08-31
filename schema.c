@@ -1241,10 +1241,10 @@ lookup_node (sch_instance *instance, xmlNs *ns, xmlNode *node, const char *path)
     {
         path++;
     }
-    key = strchr (path, '/');
-    if (key)
+    const char *sep = strchr (path, '/');
+    if (sep)
     {
-        len = key - path;
+        len = sep - path;
         key = g_strndup (path, len);
         path += len;
     }
@@ -1402,7 +1402,7 @@ static bool
 sch_node_find_name (sch_instance *instance, xmlNs *ns, sch_node *parent, const char *path, int flags, GList **path_list)
 {
     char *name;
-    char *next;
+    const char *next;
     char *colon;
     bool found = false;
 
@@ -2539,7 +2539,7 @@ parse_query_fields (sch_node * schema, char *fields, GNode *parent, int flags, i
 }
 
 static bool
-_sch_query_to_gnode (GNode *root, sch_node *schema, char *query, int *rflags, int depth, int *param_depth)
+_sch_query_to_gnode (GNode *root, sch_node *schema, const char *query, int *rflags, int depth, int *param_depth)
 {
     int flags = rflags? * rflags : 0;
     GNode *node;
@@ -2551,13 +2551,14 @@ _sch_query_to_gnode (GNode *root, sch_node *schema, char *query, int *rflags, in
     bool config = true;
     bool nonconfig = true;
     char *qfields = NULL;
+    char *_query = NULL;
     int qdepth = INT_MAX;
 
     bool rc = false;
 
     /* Parse all queries out of uri first */
-    query = g_strdup (query);
-    parameter = strtok_r (query, "&", &ptr);
+    _query = g_strdup (query);
+    parameter = strtok_r (_query, "&", &ptr);
     while (parameter)
     {
         char *value = strchr (parameter, '=') + 1;
@@ -2677,7 +2678,7 @@ _sch_query_to_gnode (GNode *root, sch_node *schema, char *query, int *rflags, in
 
 exit:
     free (qfields);
-    free (query);
+    free (_query);
     if (rc && rflags)
         *rflags = flags;
     return rc;
@@ -2687,7 +2688,7 @@ bool sch_query_to_gnode (sch_instance * instance, sch_node * schema, GNode *pare
                          int *rflags, int *param_depth)
 {
     int _flags = flags;
-    bool rc = _sch_query_to_gnode (parent, schema ?: xmlDocGetRootElement (instance->doc), (char *) query,
+    bool rc = _sch_query_to_gnode (parent, schema ?: xmlDocGetRootElement (instance->doc), query,
                                    &_flags, 0, param_depth);
     if (rflags)
         *rflags = _flags;
@@ -2737,7 +2738,7 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
     GNode *node = NULL;
     GNode *rnode = NULL;
     GNode *child = NULL;
-    char *query = NULL;
+    const char *query = NULL;
     char *pred = NULL;
     char *equals = NULL;
     char *new_path = NULL;
@@ -3017,7 +3018,7 @@ GNode *
 sch_path_to_query (sch_instance * instance, sch_node * schema, const char *path, int flags)
 {
     char *_path = NULL;
-    char *query;
+    const char *query;
     GNode *root;
     int depth;
     int param_depth = 0;
@@ -4228,7 +4229,7 @@ static GNode *
 _sch_json_to_gnode (sch_instance * instance, sch_node * schema, xmlNs *ns,
                    json_t * json, const char *name, int flags, int depth)
 {
-    char *colon;
+    const char *colon;
     json_t *child;
     const char *cname;
     size_t index;
