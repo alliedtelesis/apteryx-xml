@@ -4607,7 +4607,7 @@ _sch_trim_tree_by_depth (sch_instance *instance, sch_node *schema, GNode *parent
         g_free (name);
         name = g_strdup (APTERYX_NAME (child));
         schema = xmlDocGetRootElement (instance->doc);
-        colon = strchr (name, ':');
+        colon = name ? strchr (name, ':') : NULL;
         if (schema && colon)
         {
             colon[0] = '\0';
@@ -4736,7 +4736,7 @@ sch_trim_tree_by_depth (sch_instance *instance, sch_node *schema, GNode *node, i
             return rc;
         name = g_strdup (APTERYX_NAME (node));
         schema = xmlDocGetRootElement (instance->doc);
-        colon = strchr (name, ':');
+        colon = name ? strchr (name, ':') : NULL;
         if (schema && colon)
         {
             colon[0] = '\0';
