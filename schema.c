@@ -1503,7 +1503,12 @@ sch_node *
 sch_node_child_first (sch_node *parent)
 {
     xmlNode *xml = (xmlNode *) parent;
-    xmlNode *n = xml->children;
+    xmlNode *n;
+
+    if (!xml)
+        return NULL;
+
+    n = xml->children;
 
     while (n)
     {
