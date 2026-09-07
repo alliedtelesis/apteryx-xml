@@ -1577,8 +1577,14 @@ static char *
 _sch_name (sch_node * node, bool add_ns)
 {
     xmlNode *n = (xmlNode *) node;
-    sch_instance *instance = n ? n->doc->_private : NULL;
-    char *name = (char *) xmlGetProp (n, (xmlChar *) "name");
+    sch_instance *instance;
+    char *name;
+
+    if (!n)
+        return NULL;
+
+    instance = n->doc->_private;
+    name = (char *) xmlGetProp (n, (xmlChar *) "name");
     if (!_sch_ns_native (instance, n->ns) && !sch_node_parent (sch_node_parent (node)) && add_ns)
     {
         char *_name = g_strdup_printf ("%s:%s", n->ns->prefix, name);
