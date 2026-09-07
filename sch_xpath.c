@@ -553,7 +553,7 @@ sch_xpath_scan_nc_name (xpath_scanner *xpar)
     while (g_match_info_matches (match_info))
     {
         dummy = g_match_info_fetch (match_info, 0);
-        if (first)
+        if (first && dummy)
         {
             match = g_strdup (dummy);
             xpar->cur_index += strlen (match) - 1;
