@@ -59,6 +59,11 @@ sch_axis_child (sch_instance *instance, char *path, char *step_path, char *child
         else
         {
             _path = g_strdup (step_path ? : path);
+            if (!_path)
+            {
+                presult->result = false;
+                return;
+            }
             if ((*flags & PROC_F_FIRST_CHILD) == 0 && g_strcmp0 (path, step_path) == 0)
             {
                 sch_node *s_node = sch_lookup (instance, path);
@@ -102,6 +107,9 @@ sch_axis_parent (char *path, char *step_path, cond_result *presult, bool self, i
 
     /* Remove the last path directive to move to a parent path */
     _path = g_strdup (step_path ? : path);
+    if (!_path)
+        return;
+
     ptr = strrchr (_path, '/');
     if (ptr)
     {
