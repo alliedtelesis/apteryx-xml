@@ -35,7 +35,10 @@
 #include <lauxlib.h>
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
+#define APTERYX_XML_JSON
+#include <jansson.h>
 #include <apteryx.h>
+#include "apteryx-xml.h"
 
 #define TEST_PATH           "/test"
 #define TEST_ITERATIONS     1000
@@ -349,6 +352,76 @@ test_lua_api_perf_set ()
     CU_ASSERT (assert_apteryx_empty ());
 }
 
+/* Does the tree contain this path (relative to the root node's own name)? */
+static bool
+tree_has_path (GNode *root, const char *path)
+{
+    char **parts = g_strsplit (path, "/", -1);
+    GNode *node = root;
+    bool found = root != NULL;
+
+    for (int i = 0; found && parts[i]; i++)
+    {
+        if (!parts[i][0])
+            continue;
+        node = apteryx_find_child (node, parts[i]);
+        found = node != NULL;
+    }
+    g_strfreev (parts);
+    return found;
+}
+
+void
+test_schema_names (void)
+{
+    const char *json_in = "{\"object\":[{\"name\":\"my_obj-1\",\"top_container\":"
+                          "{\"inner_container\":{\"conf\":{\"enabled\":true}}}}]}";
+    const char *path_in = "/test/objects/object/my_obj-1/top_container/inner_container/conf/enabled";
+    int flags = SCH_F_JSON_ARRAYS | SCH_F_JSON_TYPES;
+    sch_instance *schema = sch_load (TEST_SCHEMA_PATH);
+    sch_node *objects;
+    sch_node *rschema = NULL;
+    json_t *in;
+    GNode *tree;
+
+    CU_ASSERT (schema != NULL);
+    if (!schema)
+        return;
+    objects = sch_lookup (schema, "/test/objects");
+    CU_ASSERT (objects != NULL);
+    in = json_loads (json_in, 0, NULL);
+
+    /* Schema names are used for nodes, list keys are left alone */
+    tree = sch_json_to_gnode (schema, objects, in, flags);
+    CU_ASSERT (tree != NULL);
+    CU_ASSERT (tree_has_path (tree, "/object/my_obj-1/top-container/inner-container/conf/enabled"));
+    CU_ASSERT (!tree_has_path (tree, "/object/my_obj-1/top_container"));
+    CU_ASSERT (tree_has_path (tree, "/object/my_obj-1/name"));
+    apteryx_free_tree (tree);
+    json_decref (in);
+
+    /* Same for paths */
+    tree = sch_path_to_gnode (schema, NULL, path_in, 0, &rschema);
+    CU_ASSERT (tree != NULL);
+    CU_ASSERT (tree_has_path (tree, "/objects/object/my_obj-1/top-container/inner-container/conf/enabled"));
+    CU_ASSERT (!tree_has_path (tree, "/objects/object/my_obj-1/top_container"));
+    apteryx_free_tree (tree);
+
+    /* And queries */
+    tree = sch_path_to_query (schema, NULL, "/test/objects/object/my_obj-1/top_container", 0);
+    CU_ASSERT (tree != NULL);
+    CU_ASSERT (tree_has_path (tree, "/objects/object/my_obj-1/top-container"));
+    apteryx_free_tree (tree);
+
+    /* Names that already match are unchanged */
+    rschema = NULL;
+    tree = sch_path_to_gnode (schema, NULL, "/test/objects/object/x/name", 0, &rschema);
+    CU_ASSERT (tree_has_path (tree, "/objects/object/x/name"));
+    apteryx_free_tree (tree);
+
+    sch_free (schema);
+}
+
 static int
 suite_init (void)
 {
@@ -374,6 +447,7 @@ CU_TestInfo tests_lua[] = {
     {"lua load api performance", test_lua_load_api_performance},
     {"lua api get performance", test_lua_api_perf_get},
     {"lua api set performance", test_lua_api_perf_set},
+    {"schema names", test_schema_names},
     CU_TEST_INFO_NULL,
 };
 

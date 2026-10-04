@@ -1606,6 +1606,28 @@ sch_name_no_ns (sch_node *node)
     return _sch_name (node, false);
 }
 
+/* The name to give a node that has been found in the schema.
+ *
+ * Nodes are found by name ignoring the difference between '-' and '_', so we
+ * can be given "top_container" for the node the schema calls "top-container".
+ * The Apteryx path has to use the schema's spelling, so that is what is returned.
+ *
+ * What is returned is either the name we were given (so the caller can tell
+ * nothing needs to change by comparing the pointers) or the schema's own copy
+ * of the name, which is valid as long as the schema is and is not to be freed.
+ * We keep the name we were given if it is already the schema's, and for a
+ * wildcard node, where the name is a list key and not the name of a node. */
+static const char *
+_sch_canonical_name (sch_node * schema, const char *name)
+{
+    xmlAttr *attr = xmlHasProp ((xmlNode *) schema, (const xmlChar *) "name");
+    const char *schema_name = (attr && attr->children) ? (const char *) attr->children->content : NULL;
+
+    if (!schema_name || schema_name[0] == '*' || strcmp (schema_name, name) == 0)
+        return name;
+    return schema_name;
+}
+
 /* Ignoring ancestors allows checking that this is a node with the model data directly attached. */
 char *
 sch_model (sch_node * node, bool ignore_ancestors)
@@ -2904,6 +2926,17 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
                 g_list_free (path_list);
                 if (new_path)
                     schema = _sch_node_child (ns, last_good_schema, name);
+            }
+        }
+
+        /* Use the name from the schema, only copying it if it is different */
+        if (schema)
+        {
+            const char *canon = _sch_canonical_name (schema, name);
+            if (canon != name)
+            {
+                free (name);
+                name = g_strdup (canon);
             }
         }
 
@@ -4272,6 +4305,9 @@ _sch_json_to_gnode (sch_instance * instance, sch_node * schema, xmlNs *ns,
         ERROR (flags, SCH_E_NOSCHEMANODE, "No schema match for json node %s\n", name);
         return NULL;
     }
+
+    /* Use the name from the schema (it lives as long as the schema does) */
+    name = _sch_canonical_name (schema, name);
 
     /* LEAF-LIST */
     if (sch_is_leaf_list (schema) && json_is_array (json))
