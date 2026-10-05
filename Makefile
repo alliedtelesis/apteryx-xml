@@ -18,7 +18,7 @@ LIBDIR?=lib
 CC:=$(CROSS_COMPILE)gcc
 LD:=$(CROSS_COMPILE)ld
 PKG_CONFIG ?= pkg-config
-APTERYX_PATH ?=
+APTERYX_PATH ?= "../apteryx"
 
 ABI_VERSION=1.4
 CFLAGS := $(CFLAGS) -g -O2
