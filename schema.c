@@ -4403,7 +4403,7 @@ _sch_json_to_gnode (sch_instance * instance, sch_node * schema, xmlNs *ns,
     /* LEAF */
     else
     {
-        if (!sch_is_writable (schema))
+        if (!(flags & SCH_F_ALLOW_READONLY) && !sch_is_writable (schema))
         {
             ERROR (flags, SCH_E_NOTWRITABLE, "Node \"%s\" not writable\n", name);
             return NULL;

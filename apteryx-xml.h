@@ -126,6 +126,7 @@ typedef enum
     SCH_F_MODIFY_DATA           = (1 << 16), /* The created tree will be used to modify the associated model */
     SCH_F_CONDITIONS            = (1 << 17), /* Check the schema node for any condition attributes */
     SCH_F_DEPTH                 = (1 << 18), /* Query to a specific depth */
+    SCH_F_ALLOW_READONLY        = (1 << 19), /* Allow data to be created for read-only (state) nodes */
 } sch_flags;
 GNode *sch_path_to_gnode (sch_instance * instance, sch_node * schema, const char * path, int flags, sch_node ** rschema);
 bool sch_query_to_gnode (sch_instance * instance, sch_node * schema, GNode *parent, const char * query, int flags,

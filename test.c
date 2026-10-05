@@ -422,6 +422,36 @@ test_schema_names (void)
     sch_free (schema);
 }
 
+void
+test_json_readonly_nodes (void)
+{
+    sch_instance *schema = sch_load (TEST_SCHEMA_PATH);
+    sch_node *settings;
+    json_t *in;
+    GNode *tree;
+
+    CU_ASSERT (schema != NULL);
+    if (!schema)
+        return;
+    settings = sch_lookup (schema, "/test/settings");
+    CU_ASSERT (settings != NULL);
+    in = json_loads ("{\"readonly\":\"yes\"}", 0, NULL);
+
+    /* Read-only (state) nodes are not writable by default */
+    tree = sch_json_to_gnode (schema, settings, in, SCH_F_JSON_TYPES);
+    CU_ASSERT (tree == NULL);
+    CU_ASSERT (sch_last_err () == SCH_E_NOTWRITABLE);
+
+    /* But can be when the data is from the source of the state */
+    tree = sch_json_to_gnode (schema, settings, in, SCH_F_JSON_TYPES | SCH_F_ALLOW_READONLY);
+    CU_ASSERT (tree != NULL);
+    CU_ASSERT (tree_has_path (tree, "/readonly"));
+    apteryx_free_tree (tree);
+
+    json_decref (in);
+    sch_free (schema);
+}
+
 static int
 suite_init (void)
 {
@@ -448,6 +478,7 @@ CU_TestInfo tests_lua[] = {
     {"lua api get performance", test_lua_api_perf_get},
     {"lua api set performance", test_lua_api_perf_set},
     {"schema names", test_schema_names},
+    {"json readonly nodes", test_json_readonly_nodes},
     CU_TEST_INFO_NULL,
 };
 
