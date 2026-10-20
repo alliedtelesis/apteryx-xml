@@ -907,6 +907,9 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
                 res.attrib["help"] = "The " + node.arg + " entry with key " + key.arg
             else:
                 res.attrib["help"] = "List of " + node.arg
+            unique_stmts = node.search("unique")
+            if unique_stmts:
+                res.attrib["unique"] = " | ".join(u.arg for u in unique_stmts)
 
         ntype = node.search_one("type")
         if ntype and ntype.i_typedef is not None:
@@ -986,3 +989,4 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
                 self.union_enum_values(ntype, res, ns)
 
         return res, module, path
+

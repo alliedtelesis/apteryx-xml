@@ -53,9 +53,10 @@
         <NODE name="seconds" when="count(../../..) = '3'" mode="rw" help="seconds" range="0..59"/>
       </NODE>
       <NODE name="users" help="This is a list of users">
-        <NODE name="*" help="The user entry with key name">
+        <NODE name="*" key="name" unique="email" help="The user entry with key name">
           <NODE name="name" mode="rw" help="This is the name of the user"/>
           <NODE name="age" mode="rw" help="integer" range="0|1..99"/>
+          <NODE name="email" mode="rw" help="Email address of the user"/>
           <NODE name="active" mode="r" default="false" help="boolean">
             <VALUE name="true" value="true"/>
             <VALUE name="false" value="false"/>
@@ -161,8 +162,19 @@
         </NODE>
       </NODE>
     </NODE>
+    <NODE name="gateways" help="This is a list with a nested unique constraint">
+      <NODE name="*" key="name" unique="config/sag/prefix" help="The gateway entry with key name">
+        <NODE name="name" mode="rw" help="name"/>
+        <NODE name="config" help="Configuration data for the gateway">
+          <NODE name="sag" help="Subnet anycast gateway settings">
+            <NODE name="prefix" mode="rw" help="Anycast prefix"/>
+            <NODE name="mac" mode="rw" help="Anycast mac"/>
+          </NODE>
+        </NODE>
+      </NODE>
+    </NODE>
     <NODE name="friends" help="This is a list with 2 keys">
-      <NODE name="*" mode="rw" key="name age" help="The friends entry with key name age">
+      <NODE name="*" mode="rw" key="name age" unique="email" help="The friends entry with key name age">
         <NODE name="name" mode="rw" help="name"/>
         <NODE name="age" mode="rw" range="0..100" help="age"/>
         <NODE name="gender" mode="rw" default="male" help="gender">
@@ -173,6 +185,7 @@
           <VALUE name="true" value="true"/>
           <VALUE name="false" value="false"/>
         </NODE>
+        <NODE name="email" mode="rw" help="email"/>
       </NODE>
     </NODE>
   </NODE>

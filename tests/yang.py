@@ -85,10 +85,14 @@ class LeafList(YangNode):
 
 
 class List(YangNode):
-    def __init__(self, name, keys=None, children=None):
+    def __init__(self, name, keys=None, children=None, unique=None):
         self.name = name
         self.keys = keys or []
         self.children = children or []
+        if isinstance(unique, str):
+            self.unique = [unique]
+        else:
+            self.unique = unique or []
 
     def add(self, node):
         self.children.append(node)
@@ -99,6 +103,8 @@ class List(YangNode):
         if self.keys:
             keys_str = ' '.join(self.keys)
             lines.append(f'{ind}  key "{keys_str}";')
+        for u in self.unique:
+            lines.append(f'{ind}  unique "{u}";')
         for child in self.children:
             lines.append(child.render(indent + 2))
         lines.append(f'{ind}}}')
