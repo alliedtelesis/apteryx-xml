@@ -3017,8 +3017,7 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
             node = _sch_path_to_gnode (instance, &schema, ns, next, flags, depth + 1);
             if (!node)
             {
-                free ((void *)rnode->data);
-                g_node_destroy (rnode);
+                apteryx_free_tree (rnode);
                 rnode = NULL;
                 goto exit;
             }

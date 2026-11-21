@@ -579,6 +579,60 @@ test_path_reserved_chars_not_writable (void)
     sch_free (schema);
 }
 
+/* A list key given on the list node itself, followed by a path that does
+ * not parse. The key node made for the list must be freed with the rest of
+ * the partial tree. */
+void
+test_path_list_key_bad_child (void)
+{
+    sch_instance *schema = sch_load (TEST_SCHEMA_PATH);
+    char *key = g_strnfill (RESERVED_KEY_TAIL_LEN, 'x');
+    char *path;
+    GNode *tree;
+
+    CU_ASSERT (schema != NULL);
+    if (!schema)
+    {
+        g_free (key);
+        return;
+    }
+
+    /* Key on the list node, no flags */
+    path = g_strdup_printf ("/test/settings/users=%s/nosuch", key);
+    tree = sch_path_to_query (schema, NULL, path, 0);
+    CU_ASSERT (tree == NULL);
+    CU_ASSERT (sch_last_err () == SCH_E_NOSCHEMANODE);
+    apteryx_free_tree (tree);
+    g_free (path);
+
+    /* Key predicate on the list node with SCH_F_XPATH */
+    tree = sch_path_to_query (schema, NULL, "/test/settings/users[name='fred']/nosuch", SCH_F_XPATH);
+    CU_ASSERT (tree == NULL);
+    CU_ASSERT (sch_last_err () == SCH_E_NOSCHEMANODE);
+    apteryx_free_tree (tree);
+
+    /* Nested keyed lists: the failure is below the inner list */
+    path = g_strdup_printf ("/test/animals/animal=%s/food=%s/nosuch", key, key);
+    tree = sch_path_to_query (schema, NULL, path, 0);
+    CU_ASSERT (tree == NULL);
+    CU_ASSERT (sch_last_err () == SCH_E_NOSCHEMANODE);
+    apteryx_free_tree (tree);
+    g_free (path);
+
+    /* Controls: the same paths with a valid child */
+    path = g_strdup_printf ("/test/settings/users=%s/name", key);
+    tree = sch_path_to_query (schema, NULL, path, 0);
+    CU_ASSERT (tree != NULL);
+    apteryx_free_tree (tree);
+    g_free (path);
+    tree = sch_path_to_query (schema, NULL, "/test/settings/users[name='fred']/name", SCH_F_XPATH);
+    CU_ASSERT (tree_has_path (tree, "/settings/users/fred/name"));
+    apteryx_free_tree (tree);
+
+    g_free (key);
+    sch_free (schema);
+}
+
 CU_TestInfo tests_lua[] = {
     {"lua load module", test_lua_lib_load},
     {"lua load models", test_lua_api_load},
@@ -596,6 +650,7 @@ CU_TestInfo tests_lua[] = {
     {"json readonly nodes", test_json_readonly_nodes},
     {"path key with reserved chars", test_path_key_with_reserved_chars},
     {"path reserved chars not writable", test_path_reserved_chars_not_writable},
+    {"path list key bad child", test_path_list_key_bad_child},
     CU_TEST_INFO_NULL,
 };
 
