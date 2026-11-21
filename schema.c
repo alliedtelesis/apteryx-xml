@@ -2999,7 +2999,6 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
                     DEBUG (flags, "%*s%s\n", depth * 2, " ", APTERYX_NAME (child));
                 }
             }
-            g_free (pred);
         }
         else if (equals && sch_is_list (schema))
         {
@@ -3010,7 +3009,6 @@ _sch_path_to_gnode (sch_instance * instance, sch_node ** rschema, xmlNs *ns, con
             g_node_prepend (rnode, child);
             depth++;
             DEBUG (flags, "%*s%s\n", depth * 2, " ", APTERYX_NAME (child));
-            g_free (equals);
             schema = sch_node_child_first (schema);
         }
 
@@ -3032,6 +3030,8 @@ exit:
     if (rschema)
         *rschema = schema;
     free (name);
+    g_free (pred);
+    g_free (equals);
     g_free (new_path);
     return rnode;
 }

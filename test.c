@@ -464,6 +464,121 @@ suite_clean (void)
     return 0;
 }
 
+/* A path element that is not a list may hold a '[' (SCH_F_XPATH) or an '='
+ * (no flags), for example a list key value that contains one. Parsing it
+ * must not lose the copy of the text after that character. Run under
+ * valgrind to see a loss; the assertions only check the parsed tree.
+ * The parser cuts the element at the '[' or '=', so "fred=xxx" is parsed as
+ * "fred" and "debug=xxx" as "debug". The tree assertions record that current
+ * behaviour, not a requirement. */
+#define RESERVED_KEY_TAIL_LEN 10000
+void
+test_path_key_with_reserved_chars (void)
+{
+    sch_instance *schema = sch_load (TEST_SCHEMA_PATH);
+    char *tail = g_strnfill (RESERVED_KEY_TAIL_LEN, 'x');
+    char *path;
+    GNode *tree;
+
+    CU_ASSERT (schema != NULL);
+    if (!schema)
+    {
+        g_free (tail);
+        return;
+    }
+
+    /* '[' in a list key value with SCH_F_XPATH */
+    path = g_strdup_printf ("/test/settings/users/fred[%s/name", tail);
+    tree = sch_path_to_query (schema, NULL, path, SCH_F_XPATH);
+    CU_ASSERT (tree_has_path (tree, "/settings/users/fred/name"));
+    apteryx_free_tree (tree);
+    g_free (path);
+
+    /* '=' in a list key value with no flags */
+    path = g_strdup_printf ("/test/settings/users/fred=%s/name", tail);
+    tree = sch_path_to_query (schema, NULL, path, 0);
+    CU_ASSERT (tree_has_path (tree, "/settings/users/fred/name"));
+    apteryx_free_tree (tree);
+    g_free (path);
+
+    /* '[' and '=' in a leaf */
+    path = g_strdup_printf ("/test/settings/debug[%s", tail);
+    tree = sch_path_to_query (schema, NULL, path, SCH_F_XPATH);
+    CU_ASSERT (tree_has_path (tree, "/settings/debug"));
+    apteryx_free_tree (tree);
+    g_free (path);
+    path = g_strdup_printf ("/test/settings/debug=%s", tail);
+    tree = sch_path_to_query (schema, NULL, path, 0);
+    CU_ASSERT (tree_has_path (tree, "/settings/debug"));
+    apteryx_free_tree (tree);
+    g_free (path);
+
+    /* '[' and '=' in a name with no schema node (error exit) */
+    path = g_strdup_printf ("/test/settings/nosuch[%s", tail);
+    tree = sch_path_to_query (schema, NULL, path, SCH_F_XPATH);
+    CU_ASSERT (tree == NULL);
+    apteryx_free_tree (tree);
+    g_free (path);
+    path = g_strdup_printf ("/test/settings/nosuch=%s", tail);
+    tree = sch_path_to_query (schema, NULL, path, 0);
+    CU_ASSERT (tree == NULL);
+    apteryx_free_tree (tree);
+    g_free (path);
+
+    /* Controls: the predicate or key on the list node itself */
+    tree = sch_path_to_query (schema, NULL, "/test/settings/users[name='fred']/name", SCH_F_XPATH);
+    CU_ASSERT (tree_has_path (tree, "/settings/users/fred/name"));
+    apteryx_free_tree (tree);
+    tree = sch_path_to_query (schema, NULL, "/test/settings/users=fred/name", 0);
+    CU_ASSERT (tree_has_path (tree, "/settings/users/fred/name"));
+    apteryx_free_tree (tree);
+
+    g_free (tail);
+    sch_free (schema);
+}
+
+/* As above, for the element after a read-only proxy when modifying data,
+ * which fails as not writable. */
+void
+test_path_reserved_chars_not_writable (void)
+{
+    sch_instance *schema = sch_load (TEST_SCHEMA_PATH);
+    char *tail = g_strnfill (RESERVED_KEY_TAIL_LEN, 'x');
+    char *path;
+    GNode *tree;
+
+    CU_ASSERT (schema != NULL);
+    if (!schema)
+    {
+        g_free (tail);
+        return;
+    }
+
+    path = g_strdup_printf ("/logical-elements/logical-element-ro/loopy/test[%s/settings/debug", tail);
+    tree = sch_path_to_query (schema, NULL, path, SCH_F_XPATH | SCH_F_MODIFY_DATA);
+    CU_ASSERT (tree == NULL);
+    CU_ASSERT (sch_last_err () == SCH_E_NOTWRITABLE);
+    apteryx_free_tree (tree);
+    g_free (path);
+
+    path = g_strdup_printf ("/logical-elements/logical-element-ro/loopy/test=%s/settings/debug", tail);
+    tree = sch_path_to_query (schema, NULL, path, SCH_F_MODIFY_DATA);
+    CU_ASSERT (tree == NULL);
+    CU_ASSERT (sch_last_err () == SCH_E_NOTWRITABLE);
+    apteryx_free_tree (tree);
+    g_free (path);
+
+    /* Control: no reserved character */
+    tree = sch_path_to_query (schema, NULL, "/logical-elements/logical-element-ro/loopy/test/settings/debug",
+                              SCH_F_MODIFY_DATA);
+    CU_ASSERT (tree == NULL);
+    CU_ASSERT (sch_last_err () == SCH_E_NOTWRITABLE);
+    apteryx_free_tree (tree);
+
+    g_free (tail);
+    sch_free (schema);
+}
+
 CU_TestInfo tests_lua[] = {
     {"lua load module", test_lua_lib_load},
     {"lua load models", test_lua_api_load},
@@ -479,6 +594,8 @@ CU_TestInfo tests_lua[] = {
     {"lua api set performance", test_lua_api_perf_set},
     {"schema names", test_schema_names},
     {"json readonly nodes", test_json_readonly_nodes},
+    {"path key with reserved chars", test_path_key_with_reserved_chars},
+    {"path reserved chars not writable", test_path_reserved_chars_not_writable},
     CU_TEST_INFO_NULL,
 };
 
