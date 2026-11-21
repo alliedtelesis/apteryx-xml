@@ -3084,6 +3084,7 @@ sch_path_to_query (sch_instance * instance, sch_node * schema, const char *path,
     }
     if (sch_is_leaf (schema) && !sch_is_readable (schema))
     {
+        apteryx_free_tree (root);
         free (_path);
         return NULL;
     }

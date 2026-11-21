@@ -633,6 +633,38 @@ test_path_list_key_bad_child (void)
     sch_free (schema);
 }
 
+/* A query for a leaf that cannot be read returns no tree, and must free
+ * the tree it parsed. */
+void
+test_path_query_write_only_leaf (void)
+{
+    sch_instance *schema = sch_load (TEST_SCHEMA_PATH);
+    GNode *tree;
+
+    CU_ASSERT (schema != NULL);
+    if (!schema)
+        return;
+
+    tree = sch_path_to_query (schema, NULL, "/test/settings/writeonly", 0);
+    CU_ASSERT (tree == NULL);
+    apteryx_free_tree (tree);
+
+    /* With a query string, which is split off before parsing */
+    tree = sch_path_to_query (schema, NULL, "/test/settings/writeonly?depth=1", 0);
+    CU_ASSERT (tree == NULL);
+    apteryx_free_tree (tree);
+
+    /* Controls: leaves that can be read */
+    tree = sch_path_to_query (schema, NULL, "/test/settings/readonly", 0);
+    CU_ASSERT (tree_has_path (tree, "/settings/readonly"));
+    apteryx_free_tree (tree);
+    tree = sch_path_to_query (schema, NULL, "/test/settings/priority", 0);
+    CU_ASSERT (tree_has_path (tree, "/settings/priority"));
+    apteryx_free_tree (tree);
+
+    sch_free (schema);
+}
+
 CU_TestInfo tests_lua[] = {
     {"lua load module", test_lua_lib_load},
     {"lua load models", test_lua_api_load},
@@ -651,6 +683,7 @@ CU_TestInfo tests_lua[] = {
     {"path key with reserved chars", test_path_key_with_reserved_chars},
     {"path reserved chars not writable", test_path_reserved_chars_not_writable},
     {"path list key bad child", test_path_list_key_bad_child},
+    {"path query write only leaf", test_path_query_write_only_leaf},
     CU_TEST_INFO_NULL,
 };
 
