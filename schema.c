@@ -764,6 +764,33 @@ sch_load_item_free (void *data)
     g_free (item);
 }
 
+/* The rpcs of all modules share one operations node, in the root namespace */
+static void
+operations_to_root (sch_instance *instance, xmlNode *module)
+{
+    const xmlChar *href = xmlDocGetRootElement (instance->doc)->ns->href;
+    xmlNode *n;
+
+    for (n = module->children; n; n = n->next)
+    {
+        xmlChar *name;
+
+        if (n->type != XML_ELEMENT_NODE || n->name[0] != 'N')
+            continue;
+        name = xmlGetProp (n, (xmlChar *) "name");
+        if (g_strcmp0 ((char *) name, "operations") == 0 &&
+            (!n->ns || g_strcmp0 ((char *) n->ns->href, (char *) href) != 0))
+        {
+            xmlNs *ns = xmlSearchNsByHref (module->doc, module, href);
+            if (!ns)
+                ns = xmlNewNs (module, href, (const xmlChar *) "apteryx-root");
+            if (ns)
+                xmlSetNs (n, ns);
+        }
+        xmlFree (name);
+    }
+}
+
 /* Parse all XML files in the search path and merge trees */
 static sch_instance *
 _sch_load (const char *path, const char *model_list_filename)
@@ -814,6 +841,7 @@ _sch_load (const char *path, const char *model_list_filename)
             syslog (LOG_ERR, "XML: ignoring empty schema \"%s\"", filename);
             continue;
         }
+        operations_to_root (instance, module_new);
         copy_nsdef_to_root (instance->doc, module_new);
         if (save_module_info (instance, module_new))
         {

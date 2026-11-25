@@ -452,6 +452,60 @@ test_json_readonly_nodes (void)
     sch_free (schema);
 }
 
+void
+test_schema_operations (void)
+{
+    const char *xml = "<?xml version='1.0' encoding='UTF-8'?>\n"
+        "<MODULE xmlns=\"http://%s.com/%s\" model=\"%s\" namespace=\"http://%s.com/%s\" prefix=\"%s\">\n"
+        "  <NODE name=\"operations\">\n"
+        "    <NODE name=\"%s\" mode=\"rwx\"/>\n"
+        "  </NODE>\n"
+        "</MODULE>\n";
+    const char *models[][2] = { { "ma", "reboot" }, { "mb", "restart" } };
+    char *dir = g_dir_make_tmp ("schema-XXXXXX", NULL);
+    sch_instance *schema;
+    sch_node *node;
+    char *model;
+
+    CU_ASSERT (dir != NULL);
+    if (!dir)
+        return;
+    for (int i = 0; i < 2; i++)
+    {
+        const char *m = models[i][0];
+        char *file = g_strdup_printf ("%s/%s.xml", dir, m);
+        char *contents = g_strdup_printf (xml, m, m, m, m, m, m, models[i][1]);
+        CU_ASSERT (g_file_set_contents (file, contents, -1, NULL));
+        g_free (contents);
+        g_free (file);
+    }
+
+    /* The rpcs of both modules are found, each in its own model */
+    schema = sch_load (dir);
+    CU_ASSERT (schema != NULL);
+    node = schema ? sch_lookup (schema, "/operations/ma:reboot") : NULL;
+    CU_ASSERT (node != NULL);
+    model = node ? sch_model (node, false) : NULL;
+    CU_ASSERT (g_strcmp0 (model, "ma") == 0);
+    free (model);
+    node = schema ? sch_lookup (schema, "/operations/mb:restart") : NULL;
+    CU_ASSERT (node != NULL);
+    model = node ? sch_model (node, false) : NULL;
+    CU_ASSERT (g_strcmp0 (model, "mb") == 0);
+    free (model);
+    if (schema)
+        sch_free (schema);
+
+    for (int i = 0; i < 2; i++)
+    {
+        char *file = g_strdup_printf ("%s/%s.xml", dir, models[i][0]);
+        unlink (file);
+        g_free (file);
+    }
+    rmdir (dir);
+    g_free (dir);
+}
+
 static int
 suite_init (void)
 {
@@ -479,6 +533,7 @@ CU_TestInfo tests_lua[] = {
     {"lua api set performance", test_lua_api_perf_set},
     {"schema names", test_schema_names},
     {"json readonly nodes", test_json_readonly_nodes},
+    {"schema operations", test_schema_operations},
     CU_TEST_INFO_NULL,
 };
 
