@@ -762,6 +762,21 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
             return patt
         return None
 
+    def length_to_pattern(self, length):
+        """A pattern for a string length restriction, e.g. "1..64 | 128" """
+        parts = []
+        for part in length.split('|'):
+            limits = [x.strip() for x in part.split('..')]
+            lo = "0" if limits[0] == "min" else limits[0]
+            hi = limits[-1]
+            if hi == "max":
+                parts.append(".{%s,}" % lo)
+            elif lo == hi:
+                parts.append(".{%s}" % lo)
+            else:
+                parts.append(".{%s,%s}" % (lo, hi))
+        return parts[0] if len(parts) == 1 else "(" + "|".join(parts) + ")"
+
     def union_enum_values(self, ntype, res, ns):
         """Generate VALUE elements for enumeration types within a union."""
         if ntype.arg != 'union':
@@ -914,8 +929,11 @@ class ApteryxXMLPlugin(plugin.PyangPlugin):
         if ntype is not None:
             if ntype.arg == "string":
                 npatt = ntype.search_one("pattern")
+                nlen = ntype.search_one("length")
                 if npatt is not None:
                     res.attrib["pattern"] = npatt.arg
+                elif nlen is not None:
+                    res.attrib["pattern"] = self.length_to_pattern(nlen.arg)
 
             elif ntype.arg == "boolean":
                 value = etree.SubElement(res, "{" + ns.arg + "}VALUE")
