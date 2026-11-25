@@ -240,3 +240,45 @@ def test_xml_union_range_enum_names():
     expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "pattern": "(0|([1-9][0-9]{0,3}|[12][0-9]{4}|3[0-4][0-9]{3}|35[0-4][0-9]{2}|355[0-2][0-9]|3553[0-7])|355(39|40))|(none)", "children":[{"tag": "VALUE", "name": "none", "value": "none", "help": "do not use this feature"}]}])
     output = pyang(yang, format="apteryx-xml", extra_args=["--enum-name"])
     assert_xml_equal(output, expected)
+
+@pytest.mark.parametrize("length, pattern", [
+    ("1..64", ".{1,64}"),
+    ("8", ".{8}"),
+    ("min..32", ".{0,32}"),
+    ("4..max", ".{4,}"),
+    ("0 | 2..3", "(.{0}|.{2,3})"),
+])
+def test_xml_string_length(length, pattern):
+    yang = f"""
+    module example {{
+        namespace "http://example.com/example";
+        prefix example;
+        leaf test {{
+            type string {{
+                length "{length}";
+            }}
+        }}
+    }}
+    """
+    expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "pattern": pattern}])
+    output = pyang(yang, format="apteryx-xml")
+    assert_xml_equal(output, expected)
+
+
+def test_xml_string_length_and_pattern():
+    # A pattern cannot be combined with a length, so the pattern wins
+    yang = """
+    module example {
+        namespace "http://example.com/example";
+        prefix example;
+        leaf test {
+            type string {
+                length "1..8";
+                pattern "[a-z]*";
+            }
+        }
+    }
+    """
+    expected = dict_to_xml("example", [{"name": "test", "mode": "rw", "pattern": "[a-z]*"}])
+    output = pyang(yang, format="apteryx-xml")
+    assert_xml_equal(output, expected)
